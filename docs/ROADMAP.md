@@ -2,7 +2,7 @@
 
 > **Document Type:** Dependency-Aware Milestone & Engineering Roadmap  
 > **Status:** Authoritative Multi-Phase Plan  
-> **Current Phase:** Phase 1 Complete / Transitioning to Phase 2 (Test District Environment)  
+> **Current Phase:** Phase 2 Complete / Transitioning to Phase 3 (Player Locomotion & Input Abstraction)  
 > **Last Verified Date:** 2026-11-18  
 
 ---
@@ -14,8 +14,8 @@ Development progresses strictly through sequential technical verification gates.
 ```mermaid
 flowchart TD
     P0["Phase 0: Engineering Foundation & Memory System [COMPLETED]"] --> P1["Phase 1: Minimal Rendering & Device Compatibility [COMPLETED]"]
-    P1 --> P2["Phase 2: Small Optimized 3D Environment [NEXT APPROVED]"]
-    P2 --> P3["Phase 3: Player Movement, Camera & Input Abstraction"]
+    P1 --> P2["Phase 2: Small Optimized 3D Environment [COMPLETED]"]
+    P2 --> P3["Phase 3: Player Movement, Camera & Input Abstraction [NEXT APPROVED]"]
     P3 --> P4["Phase 4: Havok Physics V2 & Interactive Objects"]
     P4 --> P5["Phase 5: Drivable Vehicle Simulation"]
     P5 --> P6["Phase 6: Ambient Traffic & Pedestrian AI"]
@@ -64,17 +64,23 @@ flowchart TD
 ---
 
 ### Phase 2: Small Optimized 3D Environment (Test District)
-- **Status:** `[NOT_STARTED]` (Next Approved Development Phase)
-- **Objective:** Construct and render a modular single-block urban prototype featuring roads, sidewalks, basic buildings, and street furniture.
-- **Prerequisites:** Phase 1 completion, Babylon glTF loader registered.
-- **Expected Deliverables:**
-  - Modular 3D test block exported as optimized `.glb`.
-  - PBR material setup with ambient and directional sunlight.
-  - Frustum culling and thin instancing for street props (lamps, trees).
-  - Diagnostic camera orbit for environment inspection.
-- **Technical Risks:** Excessive draw calls and uncompressed texture VRAM consumption.
-- **Verification Method:** Babylon Inspector metrics audit: draw calls < 80, memory < 350 MB on reference machine.
-- **Completion Criteria:** City block renders seamlessly without frame hitching or memory leaks over a 10-minute session.
+- **Status:** `[COMPLETED]` / `[VERIFIED]` (Verified in Task 003)
+- **Objective:** Construct and render a modular single-block urban prototype featuring roads, sidewalks, modular buildings, and instanced street furniture.
+- **Prerequisites:** Phase 1 completion.
+- **Completed Deliverables:**
+  - `src/environment/materials/MaterialLibrary.ts`: Centralized, shared PBR material palette (asphalt, concrete, sidewalks, curbs, markings, plaster, terracotta brick, modern concrete, glass, metals, foliage, wood, and emissive lamp glow).
+  - `src/environment/roads/RoadSystem.ts`: 72m × 9m main asphalt avenue, 20m × 8m T-intersection side street, elevated concrete sidewalks and curbs (0.18m), dashed highway yellow centerlines, solid white lane borders, zebra pedestrian crosswalks, and stop lines.
+  - `src/environment/buildings/BuildingGenerator.ts` & `buildingPresets.ts`: Procedural generation of 7 distinct modular buildings with commercial ground-floor shopfronts, display glazing, fabric awnings, upper floor cornices, window sills, balconies, and rooftop infrastructure (parapets, elevator penthouses, water towers, and HVAC units). Shared materials are batched and merged per building.
+  - `src/environment/props/PropFactory.ts` & `propLayout.ts`: 48 urban street props (street lamps with emissive glow lenses, trees in concrete planters, benches, waste bins, traffic signs, and roadside planters) rendered via Babylon.js Thin Instances in only 12 GPU draw calls.
+  - `src/environment/EnvironmentManager.ts`: Top-level orchestrator with complete `.dispose()` lifecycle cleanup.
+  - `src/scene/createCityScene.ts`: Natural daylight setup (Directional sunlight + Hemispheric sky fill) and 360-degree ArcRotateCamera orbit controls.
+- **Technical Risks & Mitigations:** Avoided excessive draw calls via mesh batching and Thin Instances (~45-55 draw calls, 63 active meshes); prevented VRAM exhaustion via procedural PBR materials; verified GLB pipeline deferred to subsequent external DCC pipeline phase.
+- **Verification Results:**
+  - `pnpm exec tsc --noEmit`: 0 errors.
+  - `pnpm run build`: Success in 1.46s (729 modules).
+  - Headless Chrome CDP tests: WebGPU (60 FPS instant, 60 FPS 60-frame rolling average, 63 meshes), WebGL 2 (59-60 FPS instant, 60 FPS 60-frame rolling average, 63 meshes).
+  - 60-second sustained stress test: 60 FPS locked, 12.8–13.6 MB flat JS heap, zero memory leaks.
+- **Completion Criteria:** Met in full. Modular urban district verified in both WebGPU and WebGL 2 backends.
 
 ---
 

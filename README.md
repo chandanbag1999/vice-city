@@ -85,7 +85,15 @@ Vice-City/
 ├── src/                       # TypeScript engine and gameplay source
 │   ├── core/                  # Core engine lifecycle & backends
 │   │   └── EngineFactory.ts   # Dual WebGPU / WebGL 2 bootstrapper with fallback
+│   ├── environment/           # Modular 3D urban environment subsystem
+│   │   ├── buildings/         # Procedural modular buildings & presets
+│   │   ├── materials/         # Central shared PBR material library
+│   │   ├── props/             # Thin-instanced street furniture (lamps, trees, benches)
+│   │   ├── roads/             # Avenue, intersections, sidewalks, curbs & markings
+│   │   ├── EnvironmentManager.ts # Environment orchestrator and lifecycle disposal
+│   │   └── types.ts           # Building and prop interface specifications
 │   ├── scene/                 # Scene creation & geometry management
+│   │   ├── createCityScene.ts # Modular city block test environment & orbit camera
 │   │   └── createTestScene.ts # 3D geometric test environment & orbit camera
 │   ├── ui/                    # UI & diagnostic telemetry
 │   │   └── Telemetry.ts       # Live performance HUD (FPS, backend, mesh count)
@@ -93,6 +101,10 @@ Vice-City/
 │
 ├── styles/                    # Application styling & HUD overlay CSS
 │   └── main.css               # Fullscreen canvas styling & telemetry theme
+│
+├── screenshots/               # Verified automated test screenshots
+│   ├── screenshot-webgpu.png  # WebGPU render capture
+│   └── screenshot-webgl2.png  # WebGL 2 render capture
 │
 └── docs/                      # Core architectural & requirements documentation
     ├── PRD.md                 # Product Requirements Document
@@ -112,7 +124,7 @@ Vice-City/
 ## 6. Development Workflow Quickstart
 
 > [!NOTE]
-> The engine rendering prototype is active (**Phase 1: Minimal Browser Rendering Prototype `[VERIFIED]`**). Both WebGPU primary rendering and WebGL 2 fallback have been verified in Chrome.
+> **Phase 2: Modular City Block Environment Prototype `[VERIFIED]`** is complete and operational. Both WebGPU primary rendering and WebGL 2 fallback have been verified in Chrome at locked 60 FPS, rendering roads, sidewalks, 7 distinct buildings, and 48 thin-instanced street props across 63 active meshes.
 
 Standard developer workflows using `pnpm`:
 

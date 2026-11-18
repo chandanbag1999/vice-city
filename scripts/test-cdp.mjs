@@ -1,5 +1,6 @@
 import { spawn, execSync } from "node:child_process";
 import http from "node:http";
+import fs from "node:fs";
 
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const PORT = 4173;
@@ -185,6 +186,19 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
     console.log(`DPR:              ${metrics.dpr}`);
     console.log(`Error Card:       ${metrics.hasErrorCard ? "YES - " + metrics.errorCardText : "None"}`);
 
+    // Capture screenshot for visual inspection
+    const screenshotDir = "screenshots";
+    if (!fs.existsSync(screenshotDir)) {
+      fs.mkdirSync(screenshotDir, { recursive: true });
+    }
+    const screenshotTag = disableGpu ? "webgl2" : "webgpu";
+    const screenshotData = await client.send("Page.captureScreenshot", { format: "png" });
+    if (screenshotData && screenshotData.data) {
+      const screenshotPath = `${screenshotDir}/screenshot-${screenshotTag}.png`;
+      fs.writeFileSync(screenshotPath, Buffer.from(screenshotData.data, "base64"));
+      console.log(`Screenshot captured: ${screenshotPath}`);
+    }
+
     console.log("\n--- Browser Console Logs ---");
     consoleLogs.forEach((l) => console.log(l));
 
@@ -205,8 +219,9 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
     if (fpsAvgNum < 30) {
       throw new Error(`60-Frame Avg FPS too low: ${fpsAvgNum}`);
     }
-    if (metrics.activeMeshes !== "5") {
-      throw new Error(`Expected 5 active meshes, got '${metrics.activeMeshes}'`);
+    const activeMeshesNum = parseInt(metrics.activeMeshes, 10);
+    if (isNaN(activeMeshesNum) || activeMeshesNum < 20 || activeMeshesNum > 80) {
+      throw new Error(`Expected 20-80 active meshes for city block, got '${metrics.activeMeshes}'`);
     }
 
     if (disableGpu) {

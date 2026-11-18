@@ -111,6 +111,28 @@ export class EngineBootstrap {
 
 ---
 
+## 3.1 Modular Environment Architecture (Phase 2 Baseline)
+
+The modular urban environment prototype (`src/environment/`) is decoupled from the application bootstrap and rendering loop:
+
+```mermaid
+graph TD
+    Scene[Babylon Scene] --> EnvMgr[EnvironmentManager]
+    EnvMgr --> MatLib[MaterialLibrary: Shared PBR Palette]
+    EnvMgr --> Roads[RoadSystem: Avenue, Intersection, Sidewalks, Curbs, Markings]
+    EnvMgr --> BldGen[BuildingGenerator: Modular Facades, Shopfronts, Roofs]
+    EnvMgr --> PropFac[PropFactory: Thin-Instanced Street Furniture]
+    
+    BldGen --> BldPresets[CITY_BUILDING_PRESETS: 7 Distinct Buildings]
+    PropFac --> PropLayout[Thin Instance Matrices: Lamps, Trees, Benches, Bins, Signs]
+```
+
+- **Material Reuse:** Centralized `MaterialLibrary` instantiates and manages 26 shared `PBRMaterial` instances. Meshes with identical materials within each building and road system are merged using `Mesh.MergeMeshes`, keeping scene draw calls under 50.
+- **Thin Instancing:** Street props (lamps, trees, benches, trash bins, traffic signs, planters) are rendered via Babylon.js Thin Instances (`@babylonjs/core/Meshes/thinInstanceMesh`). 48 distinct prop instances render in just 12 GPU draw calls.
+- **Lifecycle Management:** `EnvironmentManager.dispose()` cleans up all materials, merged meshes, and thin instance buffers on teardown.
+
+---
+
 ## 4. Main Game Loop & Execution Order
 
 To eliminate simulation stuttering and ensure deterministic collision results across varying frame rates, the game loop cleanly separates rendering ticks from physics ticks:

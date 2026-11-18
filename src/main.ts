@@ -2,7 +2,8 @@ import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { type Observer } from "@babylonjs/core/Misc/observable";
 import { EngineFactory } from "./core/EngineFactory";
-import { createTestScene } from "./scene/createTestScene";
+import { createCityScene } from "./scene/createCityScene";
+import { EnvironmentManager } from "./environment/EnvironmentManager";
 import { Telemetry } from "./ui/Telemetry";
 
 /**
@@ -54,6 +55,7 @@ async function bootstrap(): Promise<void> {
   // Lifecycle state tracking for clean, idempotent disposal on failure or teardown
   let engine: AbstractEngine | null = null;
   let scene: Scene | null = null;
+  let environment: EnvironmentManager | null = null;
   let telemetry: Telemetry | null = null;
   let handleResize: (() => void) | null = null;
   let contextLostObserver: Observer<AbstractEngine> | null = null;
@@ -90,6 +92,13 @@ async function bootstrap(): Promise<void> {
       telemetry = null;
     }
 
+    if (environment) {
+      try {
+        environment.dispose();
+      } catch (_) {}
+      environment = null;
+    }
+
     if (scene) {
       try {
         scene.dispose();
@@ -121,9 +130,10 @@ async function bootstrap(): Promise<void> {
 
     console.info(`[Bootstrap] Engine initialized with backend: ${backend}`);
 
-    // 2. Build 3D test scene
-    const sceneResult = createTestScene(engine, canvas);
-    scene = sceneResult.scene;
+    // 2. Build Modular City Block Environment
+    const cityResult = createCityScene(engine, canvas);
+    scene = cityResult.scene;
+    environment = cityResult.environment;
 
     // 3. Initialize lightweight telemetry overlay
     if (telemetryContainer) {

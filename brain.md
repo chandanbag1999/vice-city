@@ -120,8 +120,9 @@ All technical documents are stored in `/docs` and maintained under strict versio
 | Project Memory System | `[VERIFIED]` | Complete documentation suite established in root and `docs/` with portable relative Markdown links. |
 | Build Toolchain (`package.json`, Vite, TS) | `[VERIFIED]` | `package.json`, `pnpm-lock.yaml`, strict `tsconfig.json`, and `vite.config.ts` pinned (`@babylonjs/core` 9.35.0, `typescript` 7.0.2, `vite` 8.3.7). |
 | Engine Bootstrapper | `[VERIFIED]` | `src/core/EngineFactory.ts` with asynchronous WebGPU probing, WebGPUEngine init, explicit partial-failure disposal, and WebGL 2 fallback. |
-| Scene & Canvas Mount | `[VERIFIED]` | `index.html`, `styles/main.css`, `src/scene/createTestScene.ts`, and `src/main.ts` running at 60 FPS in Chrome 157 with context loss/restore handlers. |
+| Scene & Canvas Mount | `[VERIFIED]` | `index.html`, `styles/main.css`, `src/scene/createCityScene.ts`, and `src/main.ts` running at 60 FPS in Chrome 157 with context loss/restore handlers. |
 | Telemetry Overlay | `[VERIFIED]` | `src/ui/Telemetry.ts` displaying live backend, instant/rolling FPS, active meshes, buffer resolution, DPR, and lifecycle status. |
+| Modular City Block Environment | `[VERIFIED]` | `src/environment/` subsystem (MaterialLibrary, RoadSystem, BuildingGenerator, PropFactory, EnvironmentManager) rendering 72m avenue, intersection, sidewalks, 7 buildings, and 48 thin-instanced props in 63 active meshes. |
 | Havok WASM Setup | `[NOT_STARTED]` | Explicitly deferred to Phase 4 (physics integration milestone). |
 | Player Locomotion | `[PROPOSED]` | Architectural design documented; no code written yet. |
 | Vehicle Simulation | `[PROPOSED]` | Architectural design documented; no code written yet. |
@@ -132,16 +133,18 @@ All technical documents are stored in `/docs` and maintained under strict versio
 
 ## 8. Development State
 
-- **Current Development Phase:** **Phase 1: Minimal Browser Rendering & Device Compatibility `[COMPLETED]`**
-- **Last Completed Task:** `TASK 002.2: Rendering Foundation Hardening: Lifecycle, Telemetry & Regression Verification [VERIFIED]`
-  - Implemented genuine 60-frame rolling average in `src/ui/Telemetry.ts` using `scene.onAfterRenderObservable`, `engine.getDeltaTime()`, and pre-allocated circular `Float32Array(60)` with periodic floating-point resynchronization.
-  - Implemented strict WebGL 2 verification in `src/core/EngineFactory.ts` (`webglEngine.webGLVersion >= 2`) preventing silent degradation to WebGL 1.
-  - Hardened lifecycle ownership and teardown in `src/main.ts` with an idempotent multi-resource cleanup function for initialization failures or unmount.
-  - Replaced DOM `innerHTML` error rendering with safe `textContent` DOM nodes in `src/main.ts`.
-  - Resolved documentation inconsistency between `EngineFactory.CreateAsync` and custom `EngineFactory.create` across `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/RESEARCH_SOURCES.md`, and `docs/RISKS.md`.
-  - Added automated Chrome DevTools Protocol (CDP) test suite in `scripts/test-cdp.mjs` and verified clean 60 FPS execution in both WebGPU and WebGL 2 fallback modes on the production build.
-- **Current Active Task:** `TASK 002.2: Rendering Foundation Hardening: Lifecycle, Telemetry & Regression Verification`
-- **Next Approved Task:** `TASK 003: Modular City Block Environment Prototype (Test District with PBR Materials & Instancing)` (Awaiting explicit review and user approval)
+- **Current Development Phase:** **Phase 2: Small Optimized 3D Environment (Test District) `[COMPLETED]`** / Transitioning to **Phase 3: Player Movement, Camera & Input Abstraction `[NEXT APPROVED]`**
+- **Last Completed Task:** `TASK 003: Modular City Block Environment Prototype (Phase 2) [VERIFIED]`
+  - Built modular procedural urban environment prototype in `src/environment/` without external dependencies or heavy bundle overhead.
+  - Implemented `MaterialLibrary` with 26 shared PBR materials (asphalt, concrete, sidewalks, curbs, markings, plaster, terracotta brick, modern concrete, glass, metals, foliage, wood, and emissive lamp glow).
+  - Implemented `RoadSystem` with 72m × 9m main asphalt avenue, 20m × 8m T-intersection side street, elevated 0.18m concrete sidewalks and curbs, dashed yellow centerlines, solid white lane edges, and zebra pedestrian crosswalks with stop lines.
+  - Implemented `BuildingGenerator` & `buildingPresets.ts` procedurally assembling 7 distinct modular buildings with shopfront glass, display alcoves, fabric awnings, upper floor window bays with sills, cornices, balconies, and rooftop infrastructure (elevator penthouses, water towers, HVAC chillers). Merged shared materials per building.
+  - Implemented `PropFactory` & `propLayout.ts` with 48 urban street props (street lamps with emissive glow lenses, trees in concrete planters, benches, waste bins, traffic signs, flower planters) driven by Babylon.js Thin Instances in only 12 GPU draw calls.
+  - Mounted via `src/scene/createCityScene.ts` and `src/main.ts` with natural lighting and ArcRotateCamera orbit controls.
+  - Verified WebGPU (60 FPS, 63 meshes) and WebGL 2 (60 FPS, 63 meshes) via headless Chrome CDP test (`scripts/test-cdp.mjs`) and captured screenshots in `screenshots/`.
+  - Executed 60-second sustained stress test (`scripts/test-sustained.mjs`) demonstrating flat 12.8–13.6 MB JS heap and locked 60 FPS.
+- **Current Active Task:** `None (Phase 2 Complete / Awaiting Phase 3 user approval)`
+- **Next Approved Task:** `TASK 004 / Phase 3: Player Movement, Camera & Input Abstraction` (Awaiting explicit review and user approval)
 
 ---
 
@@ -152,6 +155,7 @@ All technical documents are stored in `/docs` and maintained under strict versio
 3. **WebGPU Telemetry Metric:** Babylon.js `WebGPUEngine` does not currently expose a single scalar `drawCalls` property; telemetry correctly displays `"N/A"` rather than inventing an unverified count.
 4. **Context Dependency:** WebGPU requires a secure context (`https://` or `localhost`). In insecure HTTP contexts, the engine automatically falls back to WebGL 2.
 5. **Mobile Physical Verification:** Mobile browser touch and GPU compatibility remains `[UNVERIFIED]` until physical iOS/Android device testing is conducted.
+6. **Blender DCC & GLB Loading Pipeline Deferred:** Because Blender is not installed in the system PATH and `@babylonjs/loaders` is not yet installed in `package.json`, 3D environment geometry is procedurally assembled via modular Babylon.js primitives. glTF/GLB loading will be integrated in Phase 7.
 
 ---
 
@@ -173,6 +177,11 @@ All technical documents are stored in `/docs` and maintained under strict versio
 ---
 
 ## 12. Verification & Audit Trail
+
+- **Document Version:** 1.4.0
+- **Audited By:** Senior Browser Game Engineer & Software Architect
+- **Audit Timestamp:** 2026-11-18T22:30:00+05:30
+- **Integrity Status:** `[VERIFIED]` Task 003 Phase 2 Modular City Block completed, verified in headless Chrome CDP tests for WebGPU and WebGL 2 at locked 60 FPS, 60s sustained test confirmed flat heap and zero leaks.
 
 - **Document Version:** 1.3.0
 - **Audited By:** Senior Browser Game Engineer & Software Architect

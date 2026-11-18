@@ -188,3 +188,12 @@ Every asset added to the project must pass validation:
 1. **glTF Validator:** Run official Khronos `gltf-validator` to ensure zero validation errors or specification violations.
 2. **Babylon.js Sandbox Check:** Load asset into Babylon Sandbox ([sandbox.babylonjs.com](https://sandbox.babylonjs.com/)) to inspect draw calls, materials, and animation loops.
 3. **Licensing Manifest:** Every external asset must be recorded in an accompanying `ATTRIBUTIONS.md` file detailing the author, license type, and source link.
+
+---
+
+## 10. Phase 2 Procedural Baseline & Subsequent GLB Integration Status
+
+- **Current Implementation Status:** `[VERIFIED]` (Task 003).
+- **Procedural Implementation Rationale:** With Blender DCC not in PATH and `@babylonjs/loaders` uninstalled, the Phase 2 modular city block was constructed procedurally via Babylon.js ES6 primitives (`MeshBuilder`, `PBRMaterial`, `Thin Instances`). This delivered an instant, clean, zero-external-dependency urban test environment running at 60 FPS without bloat.
+- **Metric Verification:** Established standard metric coordinates (1 unit = 1 meter): 72m × 9m avenue, 20m × 8m intersection, 0.18m curbs, 4.0m sidewalks, 12m–16m building footprints.
+- **Remaining GLB Integration Step:** In Phase 7 (Spatial World Streaming) and DCC art production phases, `@babylonjs/loaders` (version `9.35.0`) will be installed to load optimized glTF 2.0 / GLB models compressed with KTX2 textures and Meshopt geometry, smoothly swapping procedural meshes with textured DCC hero assets.

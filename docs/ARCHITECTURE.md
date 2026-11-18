@@ -12,7 +12,7 @@
 
 The Vice-City game engine architecture is built upon five foundational engineering principles:
 
-1. **Progressive Rendering & Graceful Fallback:** Never hard-code WebGPU as an exclusive requirement. Always initialize via Babylon's `EngineFactory.CreateAsync` with automatic WebGL 2 fallback.
+1. **Progressive Rendering & Graceful Fallback:** Never hard-code WebGPU as an exclusive requirement. Always initialize via custom `EngineFactory.create` (`src/core/EngineFactory.ts`) with automatic WebGL 2 fallback, partial resource disposal, and strict backend verification.
 2. **Explicit Memory & Lifecycle Management:** Browsers do not automatically clean up GPU buffers or WebAssembly memory allocations. Every object created must implement an explicit `dispose()` lifecycle method.
 3. **Decoupled Service Composition:** Rather than adopting a complex, boilerplate-heavy Entity-Component-System (ECS) framework or deep inheritance hierarchies, subsystems operate as cohesive, decoupled services coordinated by a central `GameWorld` director.
 4. **Platform-Agnostic Input Normalization:** Gameplay systems never listen directly to DOM keyboard or touch events. All hardware inputs feed into an `InputService` that emits standardized directional axes and abstract gameplay actions.
@@ -69,18 +69,21 @@ The application entry point bootstraps asynchronously to probe hardware features
 ```mermaid
 sequenceDiagram
     participant App as main.ts (Bootstrapper)
-    participant Factory as EngineFactory
+    participant Factory as EngineFactory (src/core/EngineFactory.ts)
     participant GPU as WebGPUEngine
     participant GL as Engine (WebGL 2)
     participant Scene as Babylon Scene
 
-    App->>Factory: CreateAsync(canvas, engineOptions)
+    App->>Factory: create(canvas, engineOptions)
     alt WebGPU Supported by Browser & Hardware
         Factory->>GPU: Initialize WebGPUEngine()
-        GPU-->>App: Return AbstractEngine (WebGPU)
+        GPU-->>Factory: Init Success
+        Factory-->>App: Return { engine, backend: "WebGPU" }
     else WebGPU Unsupported / Init Failed
+        Factory->>GPU: Dispose Partial WebGPU Resources
         Factory->>GL: Fallback to Engine(canvas, true)
-        GL-->>App: Return AbstractEngine (WebGL 2)
+        GL-->>Factory: Verify webGLVersion >= 2
+        Factory-->>App: Return { engine, backend: "WebGL 2" }
     end
     App->>Scene: new Scene(engine)
     App->>App: Register Scene Observers & Start Render Loop
@@ -88,22 +91,20 @@ sequenceDiagram
 
 ### Technical Implementation Pattern:
 ```typescript
-import { EngineFactory } from "@babylonjs/core/Engines/engineFactory";
+import { EngineFactory } from "./core/EngineFactory";
 import { Scene } from "@babylonjs/core/scene";
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 
 export class EngineBootstrap {
-    public static async initialize(canvas: HTMLCanvasElement): Promise<{ engine: AbstractEngine; scene: Scene }> {
+    public static async initialize(canvas: HTMLCanvasElement): Promise<{ engine: AbstractEngine; scene: Scene; backend: string }> {
         // Automatically probes WebGPU capabilities, falling back to WebGL 2 if unavailable
-        const engine = await EngineFactory.CreateAsync(canvas, {
+        const { engine, backend } = await EngineFactory.create(canvas, {
             antialias: true,
-            adaptToDeviceRatio: true,
             powerPreference: "high-performance",
-            audioEngine: true
         });
 
         const scene = new Scene(engine);
-        return { engine, scene };
+        return { engine, scene, backend };
     }
 }
 ```

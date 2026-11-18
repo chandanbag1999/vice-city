@@ -133,16 +133,14 @@ All technical documents are stored in `/docs` and maintained under strict versio
 ## 8. Development State
 
 - **Current Development Phase:** **Phase 1: Minimal Browser Rendering & Device Compatibility `[COMPLETED]`**
-- **Last Completed Task:** `TASK 002.1: Final Foundation Audit, Verification, Documentation Synchronization & GitHub Publication [VERIFIED]`
-  - Audited full codebase and resolved unhandled resource disposal in `EngineFactory.ts` catch block.
-  - Added graphics context loss (`onContextLostObservable`) and restoration (`onContextRestoredObservable`) observers in `main.ts` connected to `Telemetry.setStatus()`.
-  - Added duplicate render loop prevention (`engine.stopRenderLoop()`) and explicit teardown in `main.ts`.
-  - Performed rigorous headless Chrome 157.0.8103.39 browser CDP tests on production build:
-    - WebGPU Primary: 60 FPS instant, 54 FPS rolling average, 5 active meshes, 1262×568 buffer, Status "Running".
-    - WebGL 2 Fallback: 60 FPS instant, 59 FPS rolling average, 5 active meshes, 1262×624 buffer, Status "Running".
-  - Verified package versions: `@babylonjs/core` 9.35.0, `typescript` 7.0.2, `vite` 8.3.7.
-  - Verified `pnpm install --frozen-lockfile` (0 changes), `pnpm exec tsc --noEmit` (0 errors), `pnpm run build` (clean 3.73s build).
-- **Current Active Task:** `TASK 002.1: Final Foundation Audit, Verification, Documentation Synchronization & GitHub Publication`
+- **Last Completed Task:** `TASK 002.2: Rendering Foundation Hardening: Lifecycle, Telemetry & Regression Verification [VERIFIED]`
+  - Implemented genuine 60-frame rolling average in `src/ui/Telemetry.ts` using `scene.onAfterRenderObservable`, `engine.getDeltaTime()`, and pre-allocated circular `Float32Array(60)` with periodic floating-point resynchronization.
+  - Implemented strict WebGL 2 verification in `src/core/EngineFactory.ts` (`webglEngine.webGLVersion >= 2`) preventing silent degradation to WebGL 1.
+  - Hardened lifecycle ownership and teardown in `src/main.ts` with an idempotent multi-resource cleanup function for initialization failures or unmount.
+  - Replaced DOM `innerHTML` error rendering with safe `textContent` DOM nodes in `src/main.ts`.
+  - Resolved documentation inconsistency between `EngineFactory.CreateAsync` and custom `EngineFactory.create` across `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/RESEARCH_SOURCES.md`, and `docs/RISKS.md`.
+  - Added automated Chrome DevTools Protocol (CDP) test suite in `scripts/test-cdp.mjs` and verified clean 60 FPS execution in both WebGPU and WebGL 2 fallback modes on the production build.
+- **Current Active Task:** `TASK 002.2: Rendering Foundation Hardening: Lifecycle, Telemetry & Regression Verification`
 - **Next Approved Task:** `TASK 003: Modular City Block Environment Prototype (Test District with PBR Materials & Instancing)` (Awaiting explicit review and user approval)
 
 ---
@@ -175,6 +173,11 @@ All technical documents are stored in `/docs` and maintained under strict versio
 ---
 
 ## 12. Verification & Audit Trail
+
+- **Document Version:** 1.3.0
+- **Audited By:** Senior Browser Game Engineer & Software Architect
+- **Audit Timestamp:** 2026-11-18T20:55:00+05:30
+- **Integrity Status:** `[VERIFIED]` Task 002.2 hardening completed, lifecycle idempotence verified, CDP browser tests passed at 60 FPS on both WebGPU and WebGL 2 backends.
 
 - **Document Version:** 1.2.0
 - **Audited By:** Senior Browser Game Engineer & Software Architect

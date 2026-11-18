@@ -49,7 +49,7 @@
   1. *WebGPU Only:* Limits user reach, fails on older mobile devices.
   2. *WebGL 2 Only:* Misses substantial performance benefits of compute shaders, low CPU driver overhead, and modern graphics pipelines.
   3. *Dual Backend (WebGPU Primary + WebGL 2 Fallback):* Delivers next-gen performance to modern browsers while preserving universal accessibility.
-- **Decision:** Use `EngineFactory.CreateAsync(canvas, options)` to initialize WebGPU if supported, automatically falling back to WebGL 2.
+- **Decision:** Use custom `EngineFactory.create(canvas, options)` (`src/core/EngineFactory.ts`) to initialize WebGPU if supported, clean up partial resources on initialization failure, and automatically fall back to WebGL 2 with strict context verification (`webGLVersion >= 2`).
 - **Rationale:** Delivers optimal performance to modern clients without excluding users on WebGL 2 devices.
 - **Advantages:** Broadest possible audience reach; future-proof rendering architecture.
 - **Disadvantages:** Shaders and rendering pipelines must maintain compatibility with WebGL 2 limitations (avoiding WebGPU-exclusive features unless wrapped in feature guards).

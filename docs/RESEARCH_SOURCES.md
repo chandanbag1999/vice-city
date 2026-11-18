@@ -19,11 +19,11 @@
 - **Status:** `[VERIFIED]`
 
 ### 1.2 WebGPU Engine Initialization & Fallback
-- **Title:** Babylon.js WebGPU Support & EngineFactory.CreateAsync
+- **Title:** Babylon.js WebGPU Support & Engine Initialization Patterns
 - **URL:** [https://doc.babylonjs.com/setup/support/webGPU](https://doc.babylonjs.com/setup/support/webGPU)
 - **Publisher / Maintainer:** Babylon.js Documentation Team
 - **Date Accessed:** 2026-11-04
-- **Relevance:** Confirms `EngineFactory.CreateAsync(canvas, options)` signature and asynchronous initialization for WebGPUEngine with graceful fallback to WebGL 2 Engine.
+- **Relevance:** Confirms asynchronous initialization for WebGPUEngine with graceful fallback to WebGL 2 Engine, implemented in Vice-City via custom `EngineFactory.create(canvas, options)` (`src/core/EngineFactory.ts`).
 - **Architectural Impact:** Directly supports ADR-002 (Dual Rendering Backend).
 - **Status:** `[VERIFIED]`
 

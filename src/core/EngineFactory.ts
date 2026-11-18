@@ -74,6 +74,14 @@ export class EngineFactory {
         disableWebGL2Support: false,
       });
 
+      // Explicitly verify that the context created is WebGL 2 (never mislabel WebGL 1)
+      if (webglEngine.webGLVersion < 2) {
+        webglEngine.dispose();
+        throw new Error(
+          `WebGL 2 context creation failed: browser only provided WebGL ${webglEngine.webGLVersion}. WebGL 2 is strictly required.`
+        );
+      }
+
       console.info("[EngineFactory] WebGL 2 engine initialized successfully.");
 
       return {

@@ -88,7 +88,7 @@ To prevent hallucination and maintain absolute engineering integrity across sess
 - **Thermal & Memory Discipline:** Windows 11 on the reference 8 GB machine leaves ~3.5 GB of available RAM for the browser, OS, and GPU shared memory. Keep peak tab heap below **1.2 GB**.
 
 ### 4.3 Rendering & Platform Support
-- **Engine Initialization:** Always initialize rendering via `EngineFactory.CreateAsync(canvas, options)` to ensure graceful fallback: WebGPU first, WebGL 2 second.
+- **Engine Initialization:** Always initialize rendering via `EngineFactory.create(canvas, options)` (`src/core/EngineFactory.ts`) to ensure graceful fallback: WebGPU first, WebGL 2 second with explicit partial resource disposal and backend telemetry.
 - **Dual-Input Compatibility:** Every gameplay mechanic must support Keyboard/Mouse (desktop) and Touch / Pointer events (mobile/tablet).
 - **Asset Formats:** All 3D assets must be glTF 2.0 / GLB files using KTX2 / Basis Universal textures and Meshopt geometry compression. Never commit uncompressed raw PNG/TGA textures or high-poly models.
 

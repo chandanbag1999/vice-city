@@ -1,5 +1,6 @@
 import { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { Scene } from "@babylonjs/core/scene";
+import { type Observer } from "@babylonjs/core/Misc/observable";
 import { RenderingBackend } from "../core/EngineFactory";
 
 export class Telemetry {
@@ -10,11 +11,15 @@ export class Telemetry {
   private readonly _canvas: HTMLCanvasElement;
 
   private _intervalId: number | null = null;
+  private _renderObserver: Observer<Scene> | null = null;
   private _status = "Initializing";
-  private readonly _fpsHistory: Float32Array;
-  private _historyIndex = 0;
-  private _historyCount = 0;
+
+  // Genuine frame-based rolling window (last 60 rendered frames)
   private readonly _historySize = 60;
+  private readonly _frameTimeHistory: Float32Array;
+  private _frameIndex = 0;
+  private _frameCount = 0;
+  private _rollingDeltaSum = 0;
 
   constructor(
     container: HTMLElement,
@@ -28,9 +33,10 @@ export class Telemetry {
     this._scene = scene;
     this._backend = backend;
     this._canvas = canvas;
-    this._fpsHistory = new Float32Array(this._historySize);
+    this._frameTimeHistory = new Float32Array(this._historySize);
 
     this.renderInitialUI();
+    this.attachRenderObserver();
     this.startUpdating(250); // Throttled updates to prevent DOM churn
   }
 
@@ -52,7 +58,7 @@ export class Telemetry {
         <span class="telemetry-value" id="telemFpsCurrent">--</span>
       </div>
       <div class="telemetry-row">
-        <span class="telemetry-label">FPS (Average):</span>
+        <span class="telemetry-label">FPS (60-Frame Avg):</span>
         <span class="telemetry-value" id="telemFpsAvg">--</span>
       </div>
       <div class="telemetry-row">
@@ -74,6 +80,34 @@ export class Telemetry {
     `;
   }
 
+  /**
+   * Records every single rendered frame time into a pre-allocated circular buffer.
+   * Zero per-frame memory allocations.
+   */
+  private attachRenderObserver(): void {
+    this._renderObserver = this._scene.onAfterRenderObservable.add(() => {
+      const dt = this._engine.getDeltaTime();
+      if (dt > 0 && Number.isFinite(dt)) {
+        const oldDt = this._frameTimeHistory[this._frameIndex] ?? 0;
+        this._frameTimeHistory[this._frameIndex] = dt;
+        this._rollingDeltaSum = this._rollingDeltaSum - oldDt + dt;
+        this._frameIndex = (this._frameIndex + 1) % this._historySize;
+        if (this._frameCount < this._historySize) {
+          this._frameCount++;
+        }
+
+        // Periodic resynchronization to prevent floating-point accumulation drift
+        if (this._frameIndex === 0) {
+          let sum = 0;
+          for (let i = 0; i < this._frameCount; i++) {
+            sum += this._frameTimeHistory[i] ?? 0;
+          }
+          this._rollingDeltaSum = sum;
+        }
+      }
+    });
+  }
+
   private startUpdating(intervalMs: number): void {
     const statusEl = document.getElementById("telemStatus");
     const fpsCurrentEl = document.getElementById("telemFpsCurrent");
@@ -86,25 +120,16 @@ export class Telemetry {
     this._intervalId = window.setInterval(() => {
       const currentFps = this._engine.getFps();
 
-      // Record sample in circular buffer for rolling average
-      if (Number.isFinite(currentFps) && currentFps > 0) {
-        this._fpsHistory[this._historyIndex] = currentFps;
-        this._historyIndex = (this._historyIndex + 1) % this._historySize;
-        if (this._historyCount < this._historySize) {
-          this._historyCount++;
-        }
-      }
-
+      // Calculate genuine 60-frame rolling average from accumulated delta times
       let avgFps = 0;
-      if (this._historyCount > 0) {
-        let sum = 0;
-        for (let i = 0; i < this._historyCount; i++) {
-          sum += this._fpsHistory[i] ?? 0;
+      if (this._frameCount > 0 && this._rollingDeltaSum > 0) {
+        const avgDeltaMs = this._rollingDeltaSum / this._frameCount;
+        if (avgDeltaMs > 0) {
+          avgFps = 1000 / avgDeltaMs;
         }
-        avgFps = sum / this._historyCount;
       }
 
-      // Query documented draw calls if exposed on engine instance
+      // Babylon WebGPUEngine/Engine does not expose a public scalar drawCalls property; display honest label
       const engineAny = this._engine as unknown as { drawCalls?: number };
       const drawCallsValue = typeof engineAny.drawCalls === "number" ? engineAny.drawCalls : "N/A";
 
@@ -113,8 +138,8 @@ export class Telemetry {
       }
 
       if (statusEl) statusEl.textContent = this._status;
-      if (fpsCurrentEl) fpsCurrentEl.textContent = Math.round(currentFps).toString();
-      if (fpsAvgEl) fpsAvgEl.textContent = Math.round(avgFps).toString();
+      if (fpsCurrentEl) fpsCurrentEl.textContent = Math.round(Number.isFinite(currentFps) ? currentFps : 0).toString();
+      if (fpsAvgEl) fpsAvgEl.textContent = Math.round(Number.isFinite(avgFps) ? avgFps : 0).toString();
       if (meshesEl) meshesEl.textContent = this._scene.getActiveMeshes().length.toString();
       if (drawCallsEl) drawCallsEl.textContent = drawCallsValue.toString();
       if (resolutionEl) resolutionEl.textContent = `${this._canvas.width}×${this._canvas.height}`;
@@ -134,6 +159,10 @@ export class Telemetry {
     if (this._intervalId !== null) {
       clearInterval(this._intervalId);
       this._intervalId = null;
+    }
+    if (this._renderObserver !== null) {
+      this._scene.onAfterRenderObservable.remove(this._renderObserver);
+      this._renderObserver = null;
     }
     this._container.innerHTML = "";
   }

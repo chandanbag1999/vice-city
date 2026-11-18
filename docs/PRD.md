@@ -3,7 +3,7 @@
 > **Document Type:** Product Requirements Document  
 > **Status:** `[PROPOSED]` / Authoritative Planning Baseline  
 > **Target Milestones:** Prototype (Phase 1–4) & Vertical Slice (Phase 5–8)  
-> **Last Verified Date:** 2026-11-04  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -113,22 +113,22 @@ stateDiagram-v2
 
 ---
 
-## 6. Non-Functional Requirements & Performance Expectations
+## 6. Non-Functional Requirements & Performance Expectations (Target Hypotheses)
 
-### 6.1 Performance & Frame Rate
-- **Target Frame Rate (Desktop):** 60 FPS (16.6ms frame time) with 99th percentile frame times under 22ms.
-- **Target Frame Rate (Mobile):** 30–60 FPS with adaptive resolution scaling.
-- **Initial Load Time:** Interactive within 5.0 seconds over a 20 Mbps connection.
-- **Network Transfer Budget:** Initial shell bundle < 5 MB; city prototype assets < 25 MB compressed.
+### 6.1 Performance & Frame Rate (Design Targets)
+- **Target Frame Rate (Desktop):** 60 FPS (16.6ms frame time) with 99th percentile frame times under 22ms `[PROPOSED]`.
+- **Target Frame Rate (Mobile):** 30–60 FPS with adaptive resolution scaling `[PROPOSED]`.
+- **Initial Load Time:** Interactive within 5.0 seconds over a 20 Mbps connection `[PROPOSED]`.
+- **Network Transfer Budget:** Initial shell bundle < 5 MB; city prototype assets < 25 MB compressed `[PROPOSED]`.
 
 ### 6.2 Hardware Resource Ceilings (Reference Machine: 8 GB RAM, Core i3)
-- **Browser Memory Ceiling:** Peak browser tab memory under **1.0 GB** (strictly below 1.5 GB crash threshold).
-- **Draw Call Ceiling:** Maximum **150 draw calls per frame** in the default viewport.
-- **Active Triangle Count:** Maximum **250,000 to 400,000 triangles** rendered per frame via LOD and culling.
-- **Texture VRAM Budget:** Maximum **128 MB VRAM** for active textures using KTX2 / Basis Universal GPU compressed formats.
+- **Browser Memory Ceiling Hypothesis:** Peak browser tab memory targeted under **1.0 GB `[PROPOSED]`** (tab crash threshold is typically 1.5–2.0 GB depending on browser/OS; not a guaranteed limit).
+- **Draw Call Ceiling Hypothesis:** Maximum **150 draw calls per frame `[PROPOSED]`** in the default viewport.
+- **Active Triangle Count Hypothesis:** Maximum **250,000 to 400,000 triangles `[PROPOSED]`** rendered per frame via LOD and culling.
+- **Texture VRAM Budget Hypothesis:** Maximum **128 MB VRAM `[PROPOSED]`** for active textures using KTX2 / Basis Universal GPU compressed formats.
 
 > [!NOTE]
-> Specific numerical budgets will be empirically measured and calibrated during Phase 1–2 benchmarking. Until benchmarks are completed on the reference laptop, these values represent upper engineering targets.
+> All specific numerical budgets above are engineering hypotheses `[PROPOSED]`. They must be empirically measured and calibrated during Phase 1–2 benchmarking. Until benchmarks are completed on the reference laptop, these values represent upper engineering targets rather than measured constraints.
 
 ### 6.3 Browser Compatibility & Lifecycle Resiliency
 - **Context Loss Handling:** Engine must capture and handle WebGPU device lost (`device.lost`) and WebGL context lost (`webglcontextlost`) events cleanly without crashing the page.

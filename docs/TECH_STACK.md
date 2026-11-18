@@ -3,7 +3,7 @@
 > **Document Type:** Technical Stack Specification & Evaluation  
 > **Status:** `[VERIFIED]` / Project Standard Baseline  
 > **Architecture Level:** Non-Negotiable Core Stack  
-> **Last Verified Date:** 2026-11-04  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -56,17 +56,17 @@ graph TD
 - **Browser Compatibility:** Transpiled to ES2022+ targeting all modern browsers.
 - **License:** Apache License 2.0.
 - **Official Documentation:** [typescriptlang.org](https://www.typescriptlang.org/)
-- **Proposed Version:** `^5.8.0` / `^7.0.0` (Exact target: modern stable).
-- **Installed Status:** Not yet installed (`package.json` initialization scheduled for Phase 1).
+- **Selected Version:** `7.0.2` (Pinned stable in `package.json`).
+- **Installed Status:** `[VERIFIED]` Installed in Phase 1 (Task 002).
 - **Known Integration Risks:** Heavy typings in `@babylonjs/core` can increase compile times if not configured with `skipLibCheck: true`.
 
 ---
 
-### 2.2 Babylon.js (`@babylonjs/core`, `@babylonjs/loaders`)
+### 2.2 Babylon.js (`@babylonjs/core`)
 - **Purpose:** Complete 3D web rendering engine, scene graph, asset loading, and physics plugin abstraction.
 - **Selection Rationale:** Industry-standard 3D web engine with first-class native WebGPU support, built-in Havok physics plugin, complete glTF 2.0 loader ecosystem, active Microsoft backing, and zero external runtime dependencies.
 - **Key Capabilities:**
-  - `EngineFactory.CreateAsync` for automatic WebGPU/WebGL 2 selection.
+  - `WebGPUEngine` / `Engine` automatic selection via custom async factory.
   - Granular ES6 module packaging enabling strict tree-shaking.
   - Thin instancing and hardware mesh instancing.
   - Dynamic cascaded shadow maps (CSM) and PBR materials.
@@ -75,8 +75,8 @@ graph TD
 - **Browser Compatibility:** All WebGPU and WebGL 2 capable browsers on Windows, macOS, Linux, Android, and iOS.
 - **License:** Apache License 2.0.
 - **Official Documentation:** [doc.babylonjs.com](https://doc.babylonjs.com/)
-- **Proposed Version:** `^9.32.0` (Modular ES6 packages).
-- **Installed Status:** Not yet installed (scheduled for Phase 1).
+- **Selected Version:** `9.35.0` (Pinned stable in `package.json`).
+- **Installed Status:** `[VERIFIED]` Installed in Phase 1 (Task 002).
 - **Known Integration Risks:** WebGPU compute pipeline shader compilation stutters on first render if materials are not pre-warmed.
 
 ---
@@ -85,12 +85,12 @@ graph TD
 - **Purpose:** Development server, build bundler, and asset management toolchain.
 - **Selection Rationale:** Near-instant hot module replacement (HMR), native ES module support in development, highly optimized Rollup-based production builds, minimal configuration overhead compared to Webpack.
 - **Key Capabilities:** Built-in static asset handling, WebAssembly import support, fast production minification via esbuild/Rollup.
-- **Limitations:** Requires specific plugin configuration (`vite-plugin-wasm` or static asset serving) for `@babylonjs/havok` WASM binary.
+- **Limitations:** Requires specific plugin configuration (`vite-plugin-wasm` or static asset serving) for future WASM binaries.
 - **Browser Compatibility:** Development requires modern browser with native ESM; production outputs standard browser bundles.
 - **License:** MIT License.
 - **Official Documentation:** [vite.dev](https://vite.dev/)
-- **Proposed Version:** `^8.3.0` / `^6.x`.
-- **Installed Status:** Not yet installed (scheduled for Phase 1).
+- **Selected Version:** `8.3.7` (Pinned stable in `package.json`).
+- **Installed Status:** `[VERIFIED]` Installed in Phase 1 (Task 002).
 - **Known Integration Risks:** Large WASM assets must be excluded from inlining or served with proper `application/wasm` MIME type.
 
 ---
@@ -99,21 +99,21 @@ graph TD
 - **Purpose:** Next-generation browser graphics and compute pipeline.
 - **Selection Rationale:** Direct low-level access to modern GPU hardware, drastically lower CPU driver overhead compared to WebGL, compute shader capabilities, predictable multi-draw operations.
 - **Key Capabilities:** Native bind groups, render bundles, compute shaders, modern shader language (WGSL).
-- **Limitations:** Not yet supported on 100% of legacy or budget mobile devices; requires asynchronous engine initialization.
-- **Browser Compatibility:** Chrome/Edge (Windows/macOS/ChromeOS 113+), Safari (iOS/macOS 16.4+), Firefox (Windows 141+ stable, macOS/Linux expanding).
+- **Limitations:** **Not yet supported across all mobile hardware or legacy browsers.** Android requires Android 12+ and compatible Vulkan drivers (Chrome 121+); iOS Safari requires recent iOS versions with Metal WebGPU support; Linux support varies by distro and GPU driver. Requires asynchronous engine initialization.
+- **Browser Compatibility:** Chrome/Edge (Windows/macOS/ChromeOS 113+), Safari (iOS/macOS 16.4+ on compatible hardware), Firefox (Windows 141+ stable, macOS/Linux expanding).
 - **Specification:** [W3C WebGPU Candidate Recommendation](https://www.w3.org/TR/webgpu/)
 - **License:** Open W3C / Khronos Standard.
 - **Proposed Version:** W3C Standard.
-- **Installed Status:** Browser-native API.
+- **Installed Status:** Browser-native API (tested at runtime in Phase 1).
 - **Known Integration Risks:** GPU device loss (`device.lost`) must be caught to prevent permanent render freeze.
 
 ---
 
 ### 2.5 WebGL 2 (Fallback Rendering Backend)
-- **Purpose:** Guaranteed rendering compatibility fallback when WebGPU is unavailable or disabled.
-- **Selection Rationale:** Ubiquitously supported across 99%+ of all active desktop and mobile web browsers.
+- **Purpose:** Guaranteed rendering compatibility fallback when WebGPU is unavailable, unsupported, or fails to initialize.
+- **Selection Rationale:** Ubiquitously supported across 99%+ of all active desktop and mobile web browsers. Essential for broad device coverage.
 - **Key Capabilities:** 3D textures, uniform buffer objects, transform feedback, instanced rendering.
-- **Limitations:** High CPU driver overhead, synchronous shader compilation bottlenecks, no compute shader support.
+- **Limitations:** Higher CPU driver overhead, synchronous shader compilation bottlenecks, no compute shader support.
 - **Browser Compatibility:** 99%+ global support across all desktop and mobile browsers.
 - **Specification:** [Khronos WebGL 2.0 Specification](https://www.khronos.org/registry/webgl/specs/latest/2.0/)
 - **License:** Open Khronos Standard.
@@ -131,8 +131,8 @@ graph TD
 - **Browser Compatibility:** All browsers supporting WebAssembly (WASM).
 - **License:** **MIT License** (verified from `@babylonjs/havok` npm package and GitHub repository `BabylonJS/havok`).
 - **Official Documentation:** [doc.babylonjs.com/features/featuresDeepDive/physics/havokPlugin](https://doc.babylonjs.com/)
-- **Proposed Version:** `^1.3.0` / companion version for Babylon 8.x/9.x.
-- **Installed Status:** Not yet installed (scheduled for Phase 1).
+- **Proposed Version:** `^1.3.0` / companion version for Babylon 9.x.
+- **Installed Status:** `[NOT_STARTED]` **Explicitly deferred to Phase 4.** (Not installed in Phase 1 minimal rendering prototype).
 - **Known Integration Risks:** Must ensure `HavokPhysics()` async initialization resolves before enabling physics on the scene.
 
 ---
@@ -165,3 +165,16 @@ graph TD
 | `gl-matrix` | Standalone SIMD Math | MIT | Extremely fast raw array math. | Redundant with Babylon's optimized `Vector3` and `Matrix`. | `[DEPRECATED]` Do not add; use Babylon math. |
 | `cannon.js` / `ammo.js` | Legacy Physics | MIT / zlib | Pure JS or older Bullet port. | Replaced by Havok V2; far worse performance. | `[DEPRECATED]` Forbidden in this project. |
 | `gltf-validator` | Asset CI Validation | Apache 2.0 | Validates glTF compliance in build pipelines. | CLI tool, not bundled in runtime client. | `[PROPOSED]` Recommended for asset validation. |
+
+---
+
+## 4. Empirical Baseline Performance Benchmark Table
+
+> **Benchmark Protocol:** Measured via automated Chrome DevTools Protocol test harness on the development workstation. Values not yet measured on physical devices are marked **TBD**.
+
+| Test Run ID | Rendering Backend | Browser & Version | Device Platform | Canvas Buffer | DPR | Instant FPS | Avg FPS (Rolling 60) | Active Meshes | Draw Calls | Verification Status | Notes / Limitations |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **BM-001** | **WebGPU** (WebGPU1 engine) | Chrome 156.0.8078.80 | Lenovo IdeaPad Slim 3i (Core i3-1005G1, UHD G1, Win11) | 762 × 484 | 1.00 | **60 FPS** | **53–60 FPS** | 5 | N/A | `[VERIFIED]` | Native WebGPU successfully initialized; drawCalls counter not exposed on WebGPUEngine. |
+| **BM-002** | **WebGL 2** (Parallel shaders) | Chrome 156.0.8078.80 (WebGPU disabled simulation) | Lenovo IdeaPad Slim 3i (Core i3-1005G1, UHD G1, Win11) | 762 × 484 | 1.00 | **60 FPS** | **59 FPS** | 5 | N/A | `[VERIFIED]` | Automatic fallback verified when WebGPU is unavailable. |
+| **BM-003** | WebGPU / WebGL 2 | Safari (iOS 17+) | iPhone 11 / A13 Bionic | TBD | TBD | TBD | TBD | TBD | TBD | `[UNVERIFIED]` | Pending physical device test. |
+| **BM-004** | WebGPU / WebGL 2 | Chrome (Android 12+) | Mid-tier Snapdragon / Dimensity | TBD | TBD | TBD | TBD | TBD | TBD | `[UNVERIFIED]` | Pending physical device test. |

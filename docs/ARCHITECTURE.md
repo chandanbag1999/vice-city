@@ -1,10 +1,10 @@
 # System Architecture Specification — Vice-City Engine
 
 > **Document Type:** Software & Engine Architecture  
-> **Status:** `[PROPOSED]` / Authoritative Technical Specification  
+> **Status:** Engine Bootstrapper `[VERIFIED]` / Architecture Baseline `[PROPOSED]`  
 > **Target Platform:** Web (Desktop & Mobile)  
 > **Primary Technologies:** TypeScript, Babylon.js, WebGPU / WebGL 2, Havok Physics V2  
-> **Last Verified Date:** 2026-11-04  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -16,7 +16,7 @@ The Vice-City game engine architecture is built upon five foundational engineeri
 2. **Explicit Memory & Lifecycle Management:** Browsers do not automatically clean up GPU buffers or WebAssembly memory allocations. Every object created must implement an explicit `dispose()` lifecycle method.
 3. **Decoupled Service Composition:** Rather than adopting a complex, boilerplate-heavy Entity-Component-System (ECS) framework or deep inheritance hierarchies, subsystems operate as cohesive, decoupled services coordinated by a central `GameWorld` director.
 4. **Platform-Agnostic Input Normalization:** Gameplay systems never listen directly to DOM keyboard or touch events. All hardware inputs feed into an `InputService` that emits standardized directional axes and abstract gameplay actions.
-5. **Fixed-Timestep Physics Simulation:** Visual rendering runs variable delta-time (interpolated), while the physics simulation (Havok) ticks at a deterministic fixed rate (60 Hz) to maintain simulation stability on low-power CPUs.
+5. **Fixed-Timestep Physics Simulation (Target Hypothesis):** Visual rendering runs variable delta-time (interpolated), while the physics simulation (Havok) is targeted to tick at a proposed fixed rate (60 Hz target hypothesis `[PROPOSED]`) to evaluate simulation stability on low-power CPUs. Actual sub-stepping parameters will be calibrated against empirical CPU profiling.
 
 ---
 
@@ -221,9 +221,9 @@ export interface IGameEntity {
 
 ---
 
-## 9. World Organization & Spatial Chunk Streaming
+## 9. World Organization & Spatial Chunk Streaming (Hypothesis Baseline)
 
-To maintain 60 FPS within an 8 GB shared-memory envelope, the urban environment is divided into an infinite or bounded 2D spatial grid:
+To evaluate stable performance within an 8 GB shared-memory envelope, the urban environment is provisionally modeled as an infinite or bounded 2D spatial grid:
 
 ```mermaid
 graph TD
@@ -234,12 +234,12 @@ graph TD
     GridMgr --> UnloadZone["Distant Ring (Radius > 2: Geometry & Textures Disposed)"]
 ```
 
-- **Chunk Size:** 64 meters × 64 meters per block.
-- **LOD Strategy:**
+- **Chunk Size Hypothesis:** **64m × 64m per block `[PROPOSED]`**. This chunk dimension is an initial working hypothesis subject to empirical streaming and memory benchmarks in Phase 7.
+- **LOD Strategy (Proposed):**
   - **LOD 0 (Near, 0–60m):** High-detail buildings with door/window geometry, street furniture, active physics colliders.
   - **LOD 1 (Medium, 60–150m):** Simplified building facades, simplified materials, colliders disabled.
   - **LOD 2 (Far, 150m–300m):** Single combined low-poly billboard / box impostors.
-- **Mesh Instancing:** Repetitive elements (palm trees, street lights, trash bins, modular road tiles) use Babylon.js `Thin Instances` or `Mesh.createInstance` to combine hundreds of objects into single draw calls.
+- **Mesh Instancing:** Repetitive elements (palm trees, street lights, trash bins, modular road tiles) use Babylon.js `Thin Instances` or `Mesh.createInstance` to combine hundreds of objects into single draw calls (targeting **< 150 draw calls per frame `[PROPOSED]`** pending measurement).
 
 ---
 

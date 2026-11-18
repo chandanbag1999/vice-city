@@ -3,7 +3,7 @@
 > **Document Type:** Detailed System Design  
 > **Status:** `[PROPOSED]` / Authoritative Engineering Specifications  
 > **Target Subsystems:** Locomotion, Vehicles, Traffic, NPC AI, Camera, Streaming, Audio, UI  
-> **Last Verified Date:** 2026-11-04  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -94,7 +94,7 @@ flowchart LR
 Simulates motor vehicle dynamics: motor torque, wheel steering, braking, weight transfer, raycast suspension spring/dampers, and tire friction.
 
 ### 3.2 Implementation Approach: Raycast Suspension vs 6DoF Rig
-> **Architectural Decision:** We prioritize a **Raycast Suspension Model** over a 4-wheel rigid body constraint rig.
+> **Proposed Architectural Hypothesis `[PROPOSED]`:** We prioritize investigating a **Raycast Suspension Model** over a 4-wheel rigid body constraint rig, to be benchmarked on target hardware.
 
 ```mermaid
 graph TD
@@ -121,7 +121,7 @@ graph TD
 3. **Exit:** Vehicle checks left side clearance with raycast; if clear, unseats character at +1.2m lateral offset and reactivates character controller.
 
 ### 3.5 Performance Concerns & Mitigations
-- Full 4-wheel rigid body joints with Havok are computationally expensive for 2-core CPUs. Raycast suspension uses only 4 down-ray queries per vehicle, scaling easily to 10+ vehicles at 60 FPS.
+- Full 4-wheel rigid body joints with Havok are computationally expensive for 2-core CPUs. Raycast suspension uses only 4 down-ray queries per vehicle, hypothesizing stable scaling to 10+ vehicles at 60 FPS (to be empirically validated in Phase 5).
 
 ---
 
@@ -147,10 +147,10 @@ graph TD
 - Pedestrians use Babylon.js `Thin Instances` or low-poly shared meshes.
 - Wandering behavior is driven by a simple finite state machine: `Wander -> Wait at Crossing -> Cross Street -> Wander`.
 
-### 4.5 Performance & Memory Budget
-- Max concurrent active traffic vehicles: **12**.
-- Max concurrent active pedestrians: **20**.
-- Total CPU time budget for traffic & pedestrian tick: **< 1.5ms per frame**.
+### 4.5 Performance & Scaling Hypotheses
+- Max concurrent active traffic vehicles: **12 `[PROPOSED]`** (initial hypothesis).
+- Max concurrent active pedestrians: **20 `[PROPOSED]`** (initial hypothesis).
+- Total CPU time budget for traffic & pedestrian tick: **< 1.5ms per frame `[PROPOSED]`** (subject to empirical measurement).
 
 ---
 
@@ -194,7 +194,7 @@ Coordinates narrative progression, checkpoint triggers, timed challenges, delive
 ## 7. World Streaming & Spatial Chunk Manager (`SYS-WRD`)
 
 ### 7.1 Responsibility
-Partitions the open-world map into modular spatial chunks (64m × 64m), loading geometry, collision, and props asynchronously based on player position, and unloading distant chunks to maintain a strict memory ceiling.
+Partitions the open-world map into modular spatial chunks (provisional hypothesis: **64m × 64m `[PROPOSED]`**), loading geometry, collision, and props asynchronously based on player position, and unloading distant chunks to respect browser memory limits. Actual chunk dimensions will be calibrated during Phase 7 streaming tests.
 
 ### 7.2 Chunk Lifecycle
 ```mermaid

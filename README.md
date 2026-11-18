@@ -49,22 +49,22 @@ The engine is engineered specifically to run smoothly on constrained consumer ha
 
 ## 4. Documentation Index
 
-The project maintains comprehensive engineering documentation under the [`docs/`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/) directory and the persistent project memory system:
+The project maintains comprehensive engineering documentation under the [`docs/`](docs/) directory and the persistent project memory system:
 
 | Document | Description |
 |---|---|
-| [**brain.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/brain.md) | **Central Project Memory & Navigation Hub** (Must-read for every session) |
-| [**AGENTS.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/AGENTS.md) | **Mandatory AI Coding Agent Operating Protocol & Rules** |
-| [**docs/PRD.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/PRD.md) | Product Requirements Document: features, scope, acceptance criteria |
-| [**docs/ARCHITECTURE.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ARCHITECTURE.md) | System architecture, engine lifecycle, loop design, memory management |
-| [**docs/SYSTEM_DESIGN.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/SYSTEM_DESIGN.md) | Detailed specifications for locomotion, vehicles, traffic, AI, audio |
-| [**docs/TECH_STACK.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/TECH_STACK.md) | Dependency matrix, licensing records, versioning, technical rationale |
-| [**docs/ROADMAP.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ROADMAP.md) | Multi-phase development roadmap from Phase 0 to Phase 10 |
-| [**docs/DECISIONS.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/DECISIONS.md) | Architecture Decision Records (ADRs) tracking all key technical choices |
-| [**docs/RESEARCH_SOURCES.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/RESEARCH_SOURCES.md) | Authoritative technical research bibliography and official links |
-| [**docs/RISKS.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/RISKS.md) | Risk register with severity, likelihood, and mitigation strategies |
-| [**docs/DEVELOPMENT_WORKFLOW.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/DEVELOPMENT_WORKFLOW.md) | 10-step development cycle, code standards, verification procedures |
-| [**docs/ASSET_PIPELINE.md**](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ASSET_PIPELINE.md) | Blender-to-glTF export rules, texture budgets, LOD standards |
+| [**brain.md**](brain.md) | **Central Project Memory & Navigation Hub** (Must-read for every session) |
+| [**AGENTS.md**](AGENTS.md) | **Mandatory AI Coding Agent Operating Protocol & Rules** |
+| [**docs/PRD.md**](docs/PRD.md) | Product Requirements Document: features, scope, acceptance criteria |
+| [**docs/ARCHITECTURE.md**](docs/ARCHITECTURE.md) | System architecture, engine lifecycle, loop design, memory management |
+| [**docs/SYSTEM_DESIGN.md**](docs/SYSTEM_DESIGN.md) | Detailed specifications for locomotion, vehicles, traffic, AI, audio |
+| [**docs/TECH_STACK.md**](docs/TECH_STACK.md) | Dependency matrix, licensing records, versioning, technical rationale |
+| [**docs/ROADMAP.md**](docs/ROADMAP.md) | Multi-phase development roadmap from Phase 0 to Phase 10 |
+| [**docs/DECISIONS.md**](docs/DECISIONS.md) | Architecture Decision Records (ADRs) tracking all key technical choices |
+| [**docs/RESEARCH_SOURCES.md**](docs/RESEARCH_SOURCES.md) | Authoritative technical research bibliography and official links |
+| [**docs/RISKS.md**](docs/RISKS.md) | Risk register with severity, likelihood, and mitigation strategies |
+| [**docs/DEVELOPMENT_WORKFLOW.md**](docs/DEVELOPMENT_WORKFLOW.md) | 10-step development cycle, code standards, verification procedures |
+| [**docs/ASSET_PIPELINE.md**](docs/ASSET_PIPELINE.md) | Blender-to-glTF export rules, texture budgets, LOD standards |
 
 ---
 
@@ -76,6 +76,23 @@ Vice-City/
 ├── AGENTS.md                  # Mandatory AI Agent instructions & startup checklist
 ├── brain.md                   # Central persistent memory & current state
 ├── README.md                  # Project overview and navigation hub
+├── index.html                 # Main application entry canvas & telemetry mount
+├── package.json               # Pinned dependencies & scripts
+├── pnpm-lock.yaml             # Pinned package lockfile
+├── tsconfig.json              # Strict TypeScript compiler options
+├── vite.config.ts             # Vite development & build configuration
+│
+├── src/                       # TypeScript engine and gameplay source
+│   ├── core/                  # Core engine lifecycle & backends
+│   │   └── EngineFactory.ts   # Dual WebGPU / WebGL 2 bootstrapper with fallback
+│   ├── scene/                 # Scene creation & geometry management
+│   │   └── createTestScene.ts # 3D geometric test environment & orbit camera
+│   ├── ui/                    # UI & diagnostic telemetry
+│   │   └── Telemetry.ts       # Live performance HUD (FPS, backend, mesh count)
+│   └── main.ts                # Application bootstrap & lifecycle handling
+│
+├── styles/                    # Application styling & HUD overlay CSS
+│   └── main.css               # Fullscreen canvas styling & telemetry theme
 │
 └── docs/                      # Core architectural & requirements documentation
     ├── PRD.md                 # Product Requirements Document
@@ -95,25 +112,25 @@ Vice-City/
 ## 6. Development Workflow Quickstart
 
 > [!NOTE]
-> The project is currently in **Phase 0: Engineering Foundation & Research**. Actual engine bootstrapping begins in Phase 1 (Task 002).
+> The engine rendering prototype is active (**Phase 1: Minimal Browser Rendering Prototype `[VERIFIED]`**). Both WebGPU primary rendering and WebGL 2 fallback have been verified in Chrome.
 
-When Phase 1 is initialized, standard workflows will follow:
+Standard developer workflows using `pnpm`:
 
 ```bash
-# Install dependencies
-npm install
+# Install pinned dependencies
+pnpm install
 
-# Start local dev server with HMR
-npm run dev
+# Start local Vite development server with HMR
+pnpm run dev
 
-# Strict TypeScript type check
-npx tsc --noEmit
+# Strict TypeScript type check (zero emit)
+pnpm run typecheck
 
-# Production build
-npm run build
+# Production build (TypeScript check + Vite bundler)
+pnpm run build
 
-# Preview production build locally
-npm run preview
+# Preview production distribution bundle locally
+pnpm run preview
 ```
 
 ---

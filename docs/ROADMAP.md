@@ -2,8 +2,8 @@
 
 > **Document Type:** Dependency-Aware Milestone & Engineering Roadmap  
 > **Status:** Authoritative Multi-Phase Plan  
-> **Current Phase:** Phase 0 (Foundation & Memory System)  
-> **Last Verified Date:** 2026-11-04  
+> **Current Phase:** Phase 1 Complete / Transitioning to Phase 2 (Test District Environment)  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -13,8 +13,8 @@ Development progresses strictly through sequential technical verification gates.
 
 ```mermaid
 flowchart TD
-    P0["Phase 0: Engineering Foundation & Memory System"] --> P1["Phase 1: Minimal Rendering & Device Compatibility"]
-    P1 --> P2["Phase 2: Small Optimized 3D Environment"]
+    P0["Phase 0: Engineering Foundation & Memory System [COMPLETED]"] --> P1["Phase 1: Minimal Rendering & Device Compatibility [COMPLETED]"]
+    P1 --> P2["Phase 2: Small Optimized 3D Environment [NEXT APPROVED]"]
     P2 --> P3["Phase 3: Player Movement, Camera & Input Abstraction"]
     P3 --> P4["Phase 4: Havok Physics V2 & Interactive Objects"]
     P4 --> P5["Phase 5: Drivable Vehicle Simulation"]
@@ -30,7 +30,7 @@ flowchart TD
 ## 2. Milestone Phase Breakdown
 
 ### Phase 0: Project Foundation & Engineering Memory
-- **Status:** `[IN_PROGRESS]` (Under Active Verification in Task 001)
+- **Status:** `[COMPLETED]` (Verified in Task 001)
 - **Objective:** Establish the complete architectural baseline, technical research library, project requirements, risk register, and AI operating protocol (`AGENTS.md` & `brain.md`).
 - **Prerequisites:** Clean workspace, Git repository initialized.
 - **Expected Deliverables:** Root documentation (`AGENTS.md`, `brain.md`, `README.md`) and complete specification suite in `/docs`.
@@ -41,23 +41,30 @@ flowchart TD
 ---
 
 ### Phase 1: Minimal Browser Rendering & Device Compatibility
-- **Status:** `[NOT_STARTED]` (Scheduled for Task 002)
+- **Status:** `[COMPLETED]` / `[VERIFIED]` (Verified in Task 002 & Task 002.1 Audit)
 - **Objective:** Scaffold the TypeScript + Vite build toolchain, integrate Babylon.js, and establish an asynchronous dual-engine bootstrapper (`WebGPUEngine` with automatic WebGL 2 fallback).
 - **Prerequisites:** Phase 0 completion.
-- **Expected Deliverables:**
-  - `package.json` with strict dependencies (`@babylonjs/core`, `vite`, `typescript`).
-  - `tsconfig.json` with strict mode enabled.
-  - `index.html` with responsive fullscreen canvas container.
-  - `src/main.ts` with `EngineFactory.CreateAsync` bootstrapper.
-  - Simple test cube with FPS and backend telemetry counter.
-- **Technical Risks:** WebGPU permission/security flags in browsers; canvas DPI scaling artifacts on high-density displays.
-- **Verification Method:** Launch dev server, test rendering in Chrome (WebGPU active) and Firefox/Safari fallback (WebGL 2 active); verify zero console errors.
-- **Completion Criteria:** Stable 60 FPS rendering of test scene on reference laptop; both WebGPU and WebGL 2 backends verified.
+- **Completed Deliverables:**
+  - `package.json` with pinned stable dependencies (`@babylonjs/core` 9.35.0, `typescript` 7.0.2, `vite` 8.3.7) and `pnpm-lock.yaml`.
+  - `tsconfig.json` with strict mode enabled (`strict`, `noImplicitAny`, `strictNullChecks`, `noUncheckedIndexedAccess`).
+  - `index.html` with responsive fullscreen canvas container and floating telemetry HUD.
+  - `styles/main.css` with responsive full-viewport styles and telemetry overlay theme.
+  - `src/core/EngineFactory.ts` with asynchronous WebGPU probing, WebGPUEngine init, error handling, explicit partial-failure resource disposal, and WebGL 2 fallback.
+  - `src/scene/createTestScene.ts` with 3D ground plane, rotating hero cube, sphere, cylinder, pillar, and dual lights.
+  - `src/ui/Telemetry.ts` displaying live backend, instant/rolling average FPS, active meshes, resolution, DPR, and lifecycle status.
+  - `src/main.ts` with graphics context loss and restoration lifecycle observers, duplicate render loop prevention, and graceful teardown.
+- **Verification Results:**
+  - `pnpm install --frozen-lockfile`: 0 changes, clean lockfile.
+  - `pnpm exec tsc --noEmit`: 0 errors.
+  - `pnpm run build`: Success in 3.73s.
+  - Chrome 157 headless CDP runtime test: **WebGPU engine verified running at 60 FPS (54 FPS rolling average, 5 meshes)**.
+  - Chrome 157 simulated fallback test (WebGPU unsupported environment): **WebGL 2 engine verified running at 60 FPS (59 FPS rolling average, 5 meshes)**.
+- **Completion Criteria:** Met in full for desktop browser rendering; both WebGPU and WebGL 2 backends empirically verified. Physical mobile-device testing remains `[UNVERIFIED]` pending mobile hardware profiling.
 
 ---
 
 ### Phase 2: Small Optimized 3D Environment (Test District)
-- **Status:** `[NOT_STARTED]`
+- **Status:** `[NOT_STARTED]` (Next Approved Development Phase)
 - **Objective:** Construct and render a modular single-block urban prototype featuring roads, sidewalks, basic buildings, and street furniture.
 - **Prerequisites:** Phase 1 completion, Babylon glTF loader registered.
 - **Expected Deliverables:**

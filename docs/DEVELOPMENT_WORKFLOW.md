@@ -4,7 +4,7 @@
 > **Status:** Mandatory Engineering Protocol  
 > **Repository Location:** `/docs/DEVELOPMENT_WORKFLOW.md`  
 > **Target Audience:** All Engineers & AI Coding Agents  
-> **Last Verified Date:** 2026-11-04  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -33,9 +33,9 @@ flowchart TD
 - Identify explicit non-goals: what must *not* be touched or implemented during this task.
 
 ### Step 2: Read Project Memory & Context
-- Read root [`brain.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/brain.md) in full using file-reading tools.
-- Read linked subsystem documentation in `/docs` relevant to the task (e.g., [`ARCHITECTURE.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ARCHITECTURE.md), [`SYSTEM_DESIGN.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/SYSTEM_DESIGN.md), [`TECH_STACK.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/TECH_STACK.md)).
-- Review current development phase in [`ROADMAP.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ROADMAP.md).
+- Read root [`brain.md`](../brain.md) in full using file-reading tools.
+- Read linked subsystem documentation in `/docs` relevant to the task (e.g., [`ARCHITECTURE.md`](ARCHITECTURE.md), [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md), [`TECH_STACK.md`](TECH_STACK.md)).
+- Review current development phase in [`ROADMAP.md`](ROADMAP.md).
 
 ### Step 3: Inspect Relevant Code on Disk
 - Execute `git status` to verify current branch and detect uncommitted work.
@@ -69,13 +69,13 @@ flowchart TD
 - Verify memory stability and draw calls using the Babylon Inspector or runtime telemetry overlay.
 
 ### Step 9: Update Project Memory & Documentation
-- Update [`brain.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/brain.md):
+- Update [`brain.md`](../brain.md):
   - Record the completed work under `Last Completed Task`.
   - Update `Current Active Task` and `Next Approved Task`.
   - Note any newly discovered bugs or technical limitations.
   - Update `Last Verification Date`.
-- If a major architectural decision was made, document it as a new ADR in [`DECISIONS.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/DECISIONS.md).
-- If risks evolved, update [`RISKS.md`](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/RISKS.md).
+- If a major architectural decision was made, document it as a new ADR in [`DECISIONS.md`](DECISIONS.md).
+- If risks evolved, update [`RISKS.md`](RISKS.md).
 
 ### Step 10: Provide Honest Completion Report
 - State clearly what was implemented, what was verified, and what remains pending.

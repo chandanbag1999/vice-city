@@ -3,8 +3,8 @@
 > **Project Identity:** Original 3D Browser Open-World Game (Codename: *Vice-City* / Web Open World)  
 > **Status:** Active Project Governance Protocol  
 > **Target Audience:** All AI Coding Assistants, LLM Agents (including OpenCode, Antigravity, Claude Code, Cursor), and Human Engineers  
-> **Documentation Version:** 1.0.0  
-> **Last Verified Date:** 2026-11-04  
+> **Documentation Version:** 1.0.1  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -40,10 +40,10 @@ flowchart TD
 ```
 
 ### Step-by-Step Instructions:
-1. **Read [brain.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/brain.md) in full:**  
+1. **Read [brain.md](brain.md) in full:**  
    Do *not* assume that referring to `brain.md` loads it automatically into context. You must explicitly execute the file-read tool on `brain.md`.
 2. **Read relevant subsystem documentation:**  
-   Depending on your task scope, read the corresponding document in `docs/` (e.g., [ARCHITECTURE.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ARCHITECTURE.md), [SYSTEM_DESIGN.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/SYSTEM_DESIGN.md), [TECH_STACK.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/TECH_STACK.md), [DEVELOPMENT_WORKFLOW.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/DEVELOPMENT_WORKFLOW.md), [ASSET_PIPELINE.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ASSET_PIPELINE.md)).
+   Depending on your task scope, read the corresponding document in `docs/` (e.g., [ARCHITECTURE.md](docs/ARCHITECTURE.md), [SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md), [TECH_STACK.md](docs/TECH_STACK.md), [DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md), [ASSET_PIPELINE.md](docs/ASSET_PIPELINE.md)).
 3. **Inspect current Git status:**  
    Run `git status` to verify uncommitted changes or working branch status. Never overwrite or wipe uncommitted human work.
 4. **Inspect the actual source files:**  
@@ -51,7 +51,7 @@ flowchart TD
 5. **Verify implementation vs documentation:**  
    If `brain.md` or any doc claims a module exists but code is absent, or if the code contradicts the docs, report the discrepancy immediately and treat code as ground truth.
 6. **Identify the current approved task:**  
-   Verify that your work aligns exactly with the `Current Active Task` defined in `brain.md` and the user's prompt. Do not begin downstream roadmap phases prematurely.
+   Verify that your work aligns exactly with the `Current Active Task` defined in `brain.md` and the user's prompt. Only ONE task is approved at a time. Do not begin downstream roadmap phases prematurely or independently expand development scope.
 7. **Identify dependencies and blockers:**  
    Ensure all prerequisite tools, types, or modules are functioning before writing dependent logic.
 
@@ -99,12 +99,12 @@ To prevent hallucination and maintain absolute engineering integrity across sess
 At the end of every user prompt or task execution, the AI agent **MUST** perform the following wrap-up sequence:
 
 1. **Verify Code & Builds:** Run build and typecheck commands (`npm run build` or `npx tsc --noEmit`) to verify zero syntax/type regressions.
-2. **Update [brain.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/brain.md):**
+2. **Update [brain.md](brain.md):**
    - Record what was completed under `Last Completed Task`.
-   - Update `Current Active Task` and `Next Approved Task`.
+   - Update `Current Active Task` and `Next Approved Task` (ensuring only one task is approved at a time).
    - Record any new `Known Bugs and Technical Limitations` discovered.
    - Update `Last Documentation Update and Verification Date`.
-3. **Update Subsystem Docs:** If architectural decisions, risks, or asset pipeline standards evolved, update the relevant file in `docs/` ([DECISIONS.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/DECISIONS.md), [RISKS.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/RISKS.md), [ROADMAP.md](file:///D:/CodeSpace/Parmanent-Field/Vice-City/docs/ROADMAP.md)).
+3. **Update Subsystem Docs:** If architectural decisions, risks, or asset pipeline standards evolved, update the relevant file in `docs/` ([DECISIONS.md](docs/DECISIONS.md), [RISKS.md](docs/RISKS.md), [ROADMAP.md](docs/ROADMAP.md)).
 4. **Provide Honest Completion Report:** State clearly what was done, what was verified, and what remains pending. Never hide failures or incomplete work.
 
 ---

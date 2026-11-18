@@ -3,7 +3,7 @@
 > **Document Type:** Architectural Decision Records (ADRs)  
 > **Status:** Authoritative Decision Log  
 > **Repository Location:** `/docs/DECISIONS.md`  
-> **Last Verified Date:** 2026-11-04  
+> **Last Verified Date:** 2026-11-18  
 
 ---
 
@@ -161,11 +161,11 @@
 ### ADR-009: Target Hardware Baseline (Lenovo IdeaPad Slim 3i & Mobile Baseline)
 
 - **Date:** 2026-11-04
-- **Status:** `[VERIFIED]` / Accepted
+- **Status:** `[VERIFIED]` / Accepted (Baseline Machine Verified; Performance Budgets `[PROPOSED]`)
 - **Context:** Establishing the engineering baseline for resource budgets, draw-call limits, and performance profiling.
 - **Decision:** Design explicitly for a primary reference workstation: Lenovo IdeaPad Slim 3i (Intel Core i3-1005G1, 2C/4T, 8 GB RAM, Intel UHD G1, Windows 11) and mid-tier mobile devices.
 - **Rationale:** If the engine maintains 60 FPS on this budget machine, it will run effortlessly on high-end gaming rigs and modern phones.
-- **Consequences:** Strict budget caps: < 150 draw calls, < 1.0 GB tab memory, aggressive instancing, and no uncompressed textures.
+- **Consequences:** Initial planning budget hypotheses: targeting < 150 draw calls `[PROPOSED]`, sub-1.0 GB active tab memory `[PROPOSED]`, aggressive instancing, and no uncompressed textures. All budget numbers remain hypotheses until empirically measured.
 
 ---
 

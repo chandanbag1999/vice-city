@@ -3,6 +3,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Material } from "@babylonjs/core/Materials/material";
 import { MaterialLibrary } from "../materials/MaterialLibrary";
 import { BuildingConfig } from "../types";
 
@@ -370,7 +371,7 @@ export class BuildingGenerator {
   private mergeMeshList(
     meshes: Mesh[],
     mergedName: string,
-    material: any,
+    material: Material | null,
     parentRoot: TransformNode
   ): void {
     if (meshes.length === 0) return;

@@ -8,7 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:browser": "node scripts/test-cdp.mjs"
+    "test:browser": "node scripts/test-cdp.mjs",
+    "test:cdp": "node scripts/test-cdp.mjs",
+    "test:sustained": "node scripts/test-sustained.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.35.0"

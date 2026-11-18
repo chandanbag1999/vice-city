@@ -83,20 +83,35 @@ Vice-City/
 ├── vite.config.ts             # Vite development & build configuration
 │
 ├── src/                       # TypeScript engine and gameplay source
+│   ├── camera/                # Third-person follow camera & spring-arm collision
+│   │   ├── CameraConfig.ts    # Camera parameters (distance, damping, cushions)
+│   │   └── ThirdPersonCamera.ts # Spherical orbit & geometry obstruction probe
 │   ├── core/                  # Core engine lifecycle & backends
 │   │   └── EngineFactory.ts   # Dual WebGPU / WebGL 2 bootstrapper with fallback
 │   ├── environment/           # Modular 3D urban environment subsystem
 │   │   ├── buildings/         # Procedural modular buildings & presets
-│   │   ├── materials/         # Central shared PBR material library
+│   │   ├── materials/         # Central shared PBR material library (32 materials)
 │   │   ├── props/             # Thin-instanced street furniture (lamps, trees, benches)
-│   │   ├── roads/             # Avenue, intersections, sidewalks, curbs & markings
+│   │   ├── roads/             # Avenue, intersections, sidewalks, curbs, markings & 30° ramp
 │   │   ├── EnvironmentManager.ts # Environment orchestrator and lifecycle disposal
 │   │   └── types.ts           # Building and prop interface specifications
+│   ├── input/                 # Unified input abstraction subsystem
+│   │   ├── GamepadInput.ts    # HTML5 Gamepad API polling & deadzones
+│   │   ├── InputService.ts    # Aggregator with diagonal vector normalization
+│   │   ├── InputTypes.ts      # Normalized InputState contract
+│   │   ├── KeyboardMouseInput.ts # WASD, sprint, jump, pointer lock & blur protection
+│   │   └── TouchInput.ts      # Multi-touch virtual joystick & button integration
+│   ├── player/                # Player character and locomotion kinematics
+│   │   ├── PlayerCharacter.ts # Stylized procedural 3D character & limb swing
+│   │   ├── PlayerConfig.ts    # Kinematic movement constants (speeds, step-up, slopes)
+│   │   ├── PlayerController.ts# Kinematic controller, wall sliding, curb step-up, FSM
+│   │   └── PlayerState.ts     # Movement state enum (IDLE, WALK, RUN, SPRINT, JUMP, FALL, LAND)
 │   ├── scene/                 # Scene creation & geometry management
-│   │   ├── createCityScene.ts # Modular city block test environment & orbit camera
+│   │   ├── createCityScene.ts # Controllable city block scene assembly
 │   │   └── createTestScene.ts # 3D geometric test environment & orbit camera
 │   ├── ui/                    # UI & diagnostic telemetry
-│   │   └── Telemetry.ts       # Live performance HUD (FPS, backend, mesh count)
+│   │   ├── Telemetry.ts       # Live performance HUD (FPS, player state, speed, pos)
+│   │   └── VirtualJoystick.ts # Responsive floating virtual thumbstick & HUD buttons
 │   └── main.ts                # Application bootstrap & lifecycle handling
 │
 ├── styles/                    # Application styling & HUD overlay CSS
@@ -121,12 +136,30 @@ Vice-City/
 
 ---
 
-## 6. Development Workflow Quickstart
+## 6. Development Workflow & Gameplay Controls
 
 > [!NOTE]
-> **Phase 2: Modular City Block Environment Prototype `[VERIFIED]`** is complete and operational. Both WebGPU primary rendering and WebGL 2 fallback have been verified in Chrome at locked 60 FPS, rendering roads, sidewalks, 7 distinct buildings, and 48 thin-instanced street props across 63 active meshes.
+> **Phase 3: Player Movement, Camera & Input Abstraction `[VERIFIED]`** is complete and operational. Both WebGPU primary rendering and WebGL 2 fallback run at locked 60 FPS in Chrome, featuring a controllable third-person player with procedural animations, curb step-up (0.18m), 30° slope traversal, wall-sliding, spring-arm camera obstruction avoidance, and multi-input support (Keyboard/Mouse, Gamepad, Touch).
 
-Standard developer workflows using `pnpm`:
+### Gameplay Controls:
+- **Desktop (Keyboard & Mouse):**
+  - **Click Canvas:** Acquire Pointer Lock for first/third-person mouse-look
+  - **W / A / S / D:** Camera-relative directional movement
+  - **Shift (Hold):** Sprint (up to 8.8 m/s)
+  - **Space:** Jump (vertical impulse with gravity simulation)
+  - **Mouse:** Spherical orbit camera view
+  - **Esc:** Release pointer lock
+- **Mobile Touch (Touchscreen Devices):**
+  - **Bottom-Left Area:** Dynamic floating virtual joystick for locomotion
+  - **Right Half of Screen:** Swipe to orbit third-person follow camera
+  - **On-Screen Buttons:** Dedicated Sprint (👟) and Jump (⬆️) action touch buttons
+- **Gamepad (Controllers):**
+  - **Left Analog Stick:** Smooth omnidirectional character movement
+  - **Right Analog Stick:** Spherical camera orbit
+  - **Button A / South:** Jump
+  - **Right Trigger / Left Stick Click:** Sprint
+
+### Standard Developer Commands (pnpm):
 
 ```bash
 # Install pinned dependencies
@@ -143,6 +176,12 @@ pnpm run build
 
 # Preview production distribution bundle locally
 pnpm run preview
+
+# Run automated headless Chrome CDP test suite (WebGPU & WebGL 2 fallback)
+pnpm run test:cdp
+
+# Run 60-second sustained stress profiling test (flat memory verification)
+pnpm run test:sustained
 ```
 
 ---

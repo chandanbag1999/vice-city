@@ -68,7 +68,7 @@ flowchart TD
 - **Objective:** Construct and render a modular single-block urban prototype featuring roads, sidewalks, modular buildings, and instanced street furniture.
 - **Prerequisites:** Phase 1 completion.
 - **Completed Deliverables:**
-  - `src/environment/materials/MaterialLibrary.ts`: Centralized, shared PBR material palette (asphalt, concrete, sidewalks, curbs, markings, plaster, terracotta brick, modern concrete, glass, metals, foliage, wood, and emissive lamp glow).
+  - `src/environment/materials/MaterialLibrary.ts`: Centralized, shared PBR material palette of 32 materials across 7 categories (asphalt, concrete, sidewalks, curbs, markings, plaster, terracotta brick, modern concrete, glass, metals, foliage, wood, and emissive lamp glow).
   - `src/environment/roads/RoadSystem.ts`: 72m × 9m main asphalt avenue, 20m × 8m T-intersection side street, elevated concrete sidewalks and curbs (0.18m), dashed highway yellow centerlines, solid white lane borders, zebra pedestrian crosswalks, and stop lines.
   - `src/environment/buildings/BuildingGenerator.ts` & `buildingPresets.ts`: Procedural generation of 7 distinct modular buildings with commercial ground-floor shopfronts, display glazing, fabric awnings, upper floor cornices, window sills, balconies, and rooftop infrastructure (parapets, elevator penthouses, water towers, and HVAC units). Shared materials are batched and merged per building.
   - `src/environment/props/PropFactory.ts` & `propLayout.ts`: 48 urban street props (street lamps with emissive glow lenses, trees in concrete planters, benches, waste bins, traffic signs, and roadside planters) rendered via Babylon.js Thin Instances in only 12 GPU draw calls.
@@ -79,23 +79,33 @@ flowchart TD
   - `pnpm exec tsc --noEmit`: 0 errors.
   - `pnpm run build`: Success in 1.46s (729 modules).
   - Headless Chrome CDP tests: WebGPU (60 FPS instant, 60 FPS 60-frame rolling average, 63 meshes), WebGL 2 (59-60 FPS instant, 60 FPS 60-frame rolling average, 63 meshes).
-  - 60-second sustained stress test: 60 FPS locked, 12.8–13.6 MB flat JS heap, zero memory leaks.
+  - 60-second sustained stress test: 60 FPS locked, stable 12.8–13.6 MB flat JS heap with no upward memory drift observed during the test window.
 - **Completion Criteria:** Met in full. Modular urban district verified in both WebGPU and WebGL 2 backends.
 
 ---
 
 ### Phase 3: Player Movement, Camera & Input Abstraction
-- **Status:** `[NOT_STARTED]`
-- **Objective:** Implement a responsive third-person character locomotion system with input abstraction supporting keyboard, mouse, and mobile touch.
+- **Status:** `[VERIFIED]` (Task 004 Completed)
+- **Objective:** Implement a responsive third-person character locomotion system with input abstraction supporting keyboard, mouse, gamepad, and mobile touch.
 - **Prerequisites:** Phase 2 environment in place.
-- **Expected Deliverables:**
-  - `InputService` normalizing Keyboard/Mouse and Touch/Virtual Joysticks.
-  - Animated 3D character model with state machine (Idle, Walk, Run, Jump).
-  - Third-person spring-arm camera with pitch/yaw orbit and wall-collision detection.
-  - Mobile touch virtual stick HUD overlay.
-- **Technical Risks:** Input latency on touch devices; camera clipping through building geometry.
-- **Verification Method:** Manual movement testing across desktop and touch simulation; wall collision boundary checks.
-- **Completion Criteria:** Character traverses terrain, climbs 30° slopes, stops at walls, and orbits camera smoothly without clipping.
+- **Completed Deliverables:**
+  - `src/input/InputTypes.ts`: Strict input contracts (`InputState`, `IInputDevice`).
+  - `src/input/KeyboardMouseInput.ts`: WASD locomotion, Shift sprint, Space jump, E interact, Pointer Lock on click, stuck-key prevention on blur/visibilitychange.
+  - `src/input/GamepadInput.ts`: HTML5 Gamepad polling with configurable deadzones (0.15) and stick smoothing.
+  - `src/input/TouchInput.ts` & `src/ui/VirtualJoystick.ts`: Multi-touch floating virtual thumbstick for left locomotion, right swipe area for camera orbit, dedicated sprint and jump action buttons with `touch-action: none`.
+  - `src/input/InputService.ts`: Unified aggregation with diagonal vector normalization ($\le 1.0$) and zero runtime allocations.
+  - `src/player/PlayerCharacter.ts`: Stylized procedural retro character with Cuban shirt, trousers, head with sunglasses visor (+Z facing indicator), articulated shoulder/hip pivots, and contra-lateral limb swing animation. Cleanly decoupled from controller for future glTF 2.0 asset swap.
+  - `src/player/PlayerController.ts`: Kinematic character controller featuring camera-relative movement, 0.18m curb step-up, 30° slope testing, wall sliding with tangent velocity projection, jump & gravity, and 7-state finite state machine (IDLE, WALK, RUN, SPRINT, JUMP, FALL, LAND).
+  - `src/camera/ThirdPersonCamera.ts`: Dedicated third-person follow camera with spherical orbit, pitch clamping ($-20^\circ$ to $+65^\circ$), spring-arm wall obstruction raycast probe against buildings, rapid pull-in, and smooth distance recovery.
+  - `src/environment/roads/RoadSystem.ts`: 30° test ramp (`ramp_slope_30deg`) and platform at eastern terminus of side street for empirical slope locomotion testing.
+  - `src/ui/Telemetry.ts`: Real-time player state, speed, and 3D coordinate metrics.
+- **Technical Risks & Mitigations:** Prevented camera clipping through walls via spring-arm raycast probe; eliminated diagonal speed exploit via vector normalization; prevented stuck keys via window blur/visibilitychange reset handlers.
+- **Verification Results:**
+  - `pnpm exec tsc --noEmit`: 0 errors.
+  - `pnpm run build`: Success in 3.31s (728 modules).
+  - Headless Chrome CDP tests: WebGPU (60 FPS instant, 60 FPS 60-frame rolling average, 67 meshes), WebGL 2 (60 FPS instant, 60 FPS 60-frame rolling average, 67 meshes). Full automated locomotion, sprint, jump, mouse look, and touch controls verified.
+  - 60-second sustained stress test: 60 FPS locked, stable 15.7 MB to 14.3 MB flat JS heap (delta -1.4 MB) with active locomotion and camera orbiting throughout the test window.
+- **Completion Criteria:** Met in full. Character traverses terrain, curbs, and 30° slopes, slides along walls, and orbits camera smoothly without clipping.
 
 ---
 

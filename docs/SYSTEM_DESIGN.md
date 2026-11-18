@@ -1,90 +1,90 @@
 # System Design Specifications — Vice-City Game Systems
 
 > **Document Type:** Detailed System Design  
-> **Status:** `[PROPOSED]` / Authoritative Engineering Specifications  
+> **Status:** `[VERIFIED]` for Phase 1-3 subsystems; `[PROPOSED]` for subsequent phases  
 > **Target Subsystems:** Locomotion, Vehicles, Traffic, NPC AI, Camera, Streaming, Audio, UI  
 > **Last Verified Date:** 2026-11-18  
 
 ---
 
-## 1. Locomotion & Character Controller System (`SYS-LOC`)
+## 1. Locomotion & Character Controller System (`SYS-LOC`) `[VERIFIED]`
 
 ### 1.1 Responsibility
-Manages player locomotion, state transitions (idle, walk, run, sprint, jump, fall, land), collision response against 3D urban terrain, and animation blend weights.
+Manages player locomotion, state transitions (idle, walk, run, sprint, jump, fall, land), collision response against 3D urban terrain, curb step-up, walkable slopes, horizontal obstacle wall-sliding, and procedural limb animations.
 
 ### 1.2 System Interfaces & Data Flow
-- **Inputs:** `InputService.moveVector`, `InputService.isSprinting`, `InputService.isJumping`, camera forward/right vectors, delta time.
-- **Outputs:** Character world position, orientation quaternion, active animation state, ground contact state.
-- **Dependencies:** Babylon.js Core, Havok Physics V2 (`PhysicsCharacterController` or kinematic capsule).
+- **Inputs:** `InputService.moveX/moveY`, `InputService.sprint`, `InputService.jump`, camera yaw angle, delta time.
+- **Outputs:** Character world position, visual facing rotation, active movement state, speed, ground contact state.
+- **Dependencies:** Babylon.js Core (`Scene`, `TransformNode`, `MeshBuilder`, `Ray`), decoupled procedural or skeletal character model.
 
 ### 1.3 Architectural Design
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
-    Idle --> Walking: moveVector > 0.1
-    Walking --> Running: moveVector > 0.5
-    Running --> Sprinting: isSprinting == true
-    Walking --> Idle: moveVector < 0.1
-    Running --> Idle: moveVector < 0.1
-    Sprinting --> Running: isSprinting == false
+    Idle --> Walking: horizontalSpeed in (0.15, 2.9]
+    Walking --> Running: horizontalSpeed in (2.9, 6.0]
+    Running --> Sprinting: horizontalSpeed > 6.0 (sprint key active)
+    Walking --> Idle: horizontalSpeed < 0.15
+    Running --> Idle: horizontalSpeed < 0.15
+    Sprinting --> Running: sprint released
     
-    Idle --> Jumping: isJumping & grounded
-    Walking --> Jumping: isJumping & grounded
-    Running --> Jumping: isJumping & grounded
+    Idle --> Jumping: jump pressed & grounded
+    Walking --> Jumping: jump pressed & grounded
+    Running --> Jumping: jump pressed & grounded
     
-    Jumping --> InAir: verticalVelocity > 0
-    InAir --> Falling: verticalVelocity < 0
-    Falling --> Landing: groundContact detected
-    Landing --> Idle: timer expired (0.15s)
+    Jumping --> InAir: verticalVelocity > 0.5
+    InAir --> Falling: verticalVelocity <= 0.5
+    Falling --> Landing: groundContact detected & heightDiff < 0.25
+    Landing --> Idle: timer expired (0.12s)
 ```
 
-### 1.4 Implementation Approach
-- Use Babylon.js Physics V2 `PhysicsCharacterController` capsule (height: 1.8m, radius: 0.4m).
-- Perform `checkSupport()` each frame to test ground normal and ground velocity.
-- Use `calculateMovement()` with target speeds:
+### 1.4 Implementation Approach (Phase 3 Verified)
+- Implemented kinematic controller in `src/player/PlayerController.ts` manipulating a character root `TransformNode`.
+- Uses stylized retro character model in `src/player/PlayerCharacter.ts` (Cuban shirt, trousers, forward sunglasses visor facing +Z, shoulder/hip pivot nodes with contra-lateral oscillation).
+- Downward ground raycast starts at $Y + stepUpHeight + 0.1$ ($0.35m$) to seamlessly step up onto $0.18m$ curbs and sidewalks without getting snagged.
+- Slope walkability check evaluates surface normal: $N_y \ge \cos(30^\circ) = 0.866$, allowing effortless traversal up to 30° slopes while treating steeper inclines as walls.
+- Horizontal obstacle sliding projects velocity onto the tangent: $\vec{v}_{\parallel} = \vec{v} - \hat{n}(\vec{v} \cdot \hat{n})$.
+- Speeds:
   - Walk: 2.5 m/s
-  - Run: 5.5 m/s
-  - Sprint: 8.5 m/s
-- Integrate gravity (`-9.81 m/s²`) when unsupported.
-- Rotate visual mesh smoothly toward desired movement vector using `Quaternion.Slerp` with an angular speed of 12 rad/s.
+  - Jog / Run: 5.5 m/s
+  - Sprint: 8.8 m/s
+  - Jump Velocity: 5.2 m/s; Gravity: 19.6 m/s²
+- Rotates visual mesh toward movement heading with shortest angular difference wrapping ($[-\pi, \pi]$) at 14 rad/s.
 
 ### 1.5 Performance Concerns & Mitigations
-- Continuous ground raycasting can cost CPU cycles; clamp ground checks to 60 Hz physics ticks.
-- Reuse static scratch vectors for velocity and direction calculation to prevent GC allocations.
+- Pre-allocated scratch vectors (`_scratchTargetVel`, `_scratchDisp`, `_groundRay`, `_forwardRay`) eliminate per-frame garbage collection spikes.
 
 ### 1.6 Verification & Testing
-- Automated test: Character ascends 30° ramp without sliding or jittering.
-- Automated test: Character cannot penetrate solid vertical static meshes.
-- Manual test: Step-up over 0.25m curbs works seamlessly without jumping.
+- Automated test: Character climbs 30° ramp (`ramp_slope_30deg`) and platform without sliding or falling through.
+- Automated test: Character slides along building walls (`bld_*`) without penetrating facades.
+- Automated test: Curb step-up over 0.18m curbs works seamlessly during forward locomotion.
 
 ---
 
-## 2. Camera System (`SYS-CAM`)
+## 2. Camera System (`SYS-CAM`) `[VERIFIED]`
 
 ### 2.1 Responsibility
-Maintains third-person follow perspective behind the player character or vehicle, executes spherical orbit look rotations from mouse/touch, and prevents the camera from clipping into walls.
+Maintains third-person follow perspective behind the player character, executes spherical orbit look rotations from mouse, touch, or gamepad, and prevents the camera from clipping into walls.
 
 ### 2.2 System Interfaces & Data Flow
-- **Inputs:** `InputService.lookVector`, player/vehicle transform, scene collision raycasts.
-- **Outputs:** Camera position, target position, field of view (FOV).
-- **Dependencies:** Babylon.js `TargetCamera` or `UniversalCamera`, scene collision spatial tree.
+- **Inputs:** `InputState.lookX/lookY`, player position vector, scene obstacle raycast.
+- **Outputs:** TargetCamera position, target look vector, yaw and pitch coordinates.
+- **Dependencies:** Babylon.js `TargetCamera`, scene raycast picking against static obstacles (`bld_*`, `shell_*`, `parapet_*`).
 
 ### 2.3 Spring-Arm Collision Avoidance
 ```mermaid
 flowchart LR
-    Anchor[Character Shoulder/Head Anchor] --> TargetCam[Desired Camera Position]
-    Anchor -- SphereCast --> Obstacle{Hit Wall?}
-    Obstacle -- Yes --> ClampedCam[Position Camera at Hit Point + 0.2m Offset]
-    Obstacle -- No --> TargetCam
+    Anchor[Character Focus Anchor Y + 1.45m] --> TargetCam[Desired Camera Position Distance 4.2m]
+    Anchor -- Spring-Arm Raycast --> Obstacle{Hit Building?}
+    Obstacle -- Yes --> ClampedCam[Instant Pull-In to Hit Distance - 0.25m Cushion]
+    Obstacle -- No --> SmoothRecover[Smooth Recovery toward 4.2m via Damping]
 ```
 
-### 2.4 Modes & Parameters
-- **On-Foot Mode:** Default distance 3.2m, shoulder offset +0.4m right, FOV 65°.
-- **Vehicle Driving Mode:** Default distance 6.5m, pitch fixed at +15°, FOV 65°–80° dynamically scaling with vehicle velocity.
-- **Collision Cushion:** 0.15m sphere-cast radius prevents frustum near-plane polygon clipping.
-
-### 2.5 Performance Concerns & Mitigations
-- Limit sphere-cast queries to 1 per frame; filter collision masks strictly to static geometry (`0x0001`).
+### 2.4 Modes & Parameters (Phase 3 Verified)
+- **On-Foot Follow:** Default distance 4.2m, min distance 0.7m, anchor height 1.45m, FOV 0.82 rad (~47° vertical, ~75° horizontal).
+- **Pitch Clamping:** Clamped between -0.35 rad (~-20°, looking up) and +1.10 rad (~+63°, looking down).
+- **Collision Cushion:** 0.25m distance cushion prevents near-plane polygon clipping through building exteriors.
+- **Zero Allocations:** Pre-allocated member vectors and rays.
 
 ---
 
@@ -241,15 +241,15 @@ Persists user game progress, unlocked vehicles, player coordinates, and configur
 
 ---
 
-## 10. User Interface & Touch Controls System (`SYS-UI`)
+## 10. User Interface & Touch Controls System (`SYS-UI`) `[VERIFIED]`
 
 ### 10.1 Responsibility
 Provides clean, high-performance visual feedback: HUD, speedometer, mini-map, dialogue/objective prompts, and responsive mobile virtual joysticks.
 
 ### 10.2 Architectural Boundary
-- Built as a decoupled DOM/HTML5 overlay layered cleanly above `<canvas id="gameCanvas">`.
+- Built as a decoupled DOM/HTML5 overlay layered cleanly above `<canvas id="renderCanvas">`.
 - Minimizes Babylon.js GUI redraw overhead; standard HTML/CSS hardware-accelerated transforms (`transform: translate3d`) execute on browser compositor threads without taxing the WebGPU render loop.
-- **Mobile Virtual Stick:** Custom touch listener capturing pointer down/move/up events, calculating normalized circular clamp $(-1.0 \text{ to } +1.0)$.
+- **Mobile Virtual Stick:** Custom touch listener capturing pointer down/move/up events with `touch-action: none` and `pointerId` tracking, calculating normalized circular clamp $(-1.0 \text{ to } +1.0)$ with responsive on-screen buttons for Sprint and Jump.
 
 ---
 

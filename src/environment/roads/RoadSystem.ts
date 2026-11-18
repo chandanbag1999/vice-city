@@ -25,6 +25,7 @@ export class RoadSystem {
     this.buildRoads();
     this.buildCurbsAndSidewalks();
     this.buildMarkings();
+    this.buildTestRamp();
   }
 
   public get root(): TransformNode {
@@ -344,6 +345,41 @@ export class RoadSystem {
       mergedYellow.material = yellowMat;
       mergedYellow.parent = this._root;
     }
+  }
+
+  /**
+   * Builds an inclined 30-degree test ramp to empirically test and verify
+   * slope locomotion, slope normal detection, and step transitions without physics jitter.
+   */
+  private buildTestRamp(): void {
+    const rampAngle = Math.PI / 6; // Exactly 30 degrees
+    const rampLength = 3.6;
+    const rampWidth = 3.0;
+    const rampThickness = 0.16;
+
+    // Positioned at the eastern terminus of the side street (X ~ 21.05m, Z = 8.0m)
+    // Sloping upward toward +X:
+    // deltaX = rampLength * cos(30 deg) = 3.6 * 0.866 = 3.118m
+    // deltaY = rampLength * sin(30 deg) = 3.6 * 0.500 = 1.80m
+    const ramp = MeshBuilder.CreateBox(
+      "ramp_slope_30deg",
+      { width: rampLength, height: rampThickness, depth: rampWidth },
+      this._scene
+    );
+    ramp.rotation.z = -rampAngle;
+    ramp.position.set(21.05, 0.90, 8.0);
+    ramp.material = this._materials.get("concrete");
+    ramp.parent = this._root;
+
+    // Small elevated landing platform at the top of the ramp (height 1.80m)
+    const landing = MeshBuilder.CreateBox(
+      "ramp_landing_platform",
+      { width: 3.0, height: 1.80, depth: 3.0 },
+      this._scene
+    );
+    landing.position.set(24.1, 0.90, 8.0);
+    landing.material = this._materials.get("concrete");
+    landing.parent = this._root;
   }
 
   public dispose(): void {

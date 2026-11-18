@@ -127,7 +127,7 @@ graph TD
     PropFac --> PropLayout[Thin Instance Matrices: Lamps, Trees, Benches, Bins, Signs]
 ```
 
-- **Material Reuse:** Centralized `MaterialLibrary` instantiates and manages 26 shared `PBRMaterial` instances. Meshes with identical materials within each building and road system are merged using `Mesh.MergeMeshes`, keeping scene draw calls under 50.
+- **Material Reuse:** Centralized `MaterialLibrary` instantiates and manages 32 shared `PBRMaterial` instances across 7 functional categories. Meshes with identical materials within each building and road system are merged using `Mesh.MergeMeshes`, keeping scene draw calls under 50.
 - **Thin Instancing:** Street props (lamps, trees, benches, trash bins, traffic signs, planters) are rendered via Babylon.js Thin Instances (`@babylonjs/core/Meshes/thinInstanceMesh`). 48 distinct prop instances render in just 12 GPU draw calls.
 - **Lifecycle Management:** `EnvironmentManager.dispose()` cleans up all materials, merged meshes, and thin instance buffers on teardown.
 
@@ -164,37 +164,68 @@ scene.onBeforeRenderObservable.add(() => {
 
 ---
 
-## 5. Input Abstraction Architecture
+## 5. Input Abstraction Architecture (Phase 3 Verified) `[VERIFIED]`
 
-The game decouples raw input devices from game actions. Whether playing via Keyboard, Mouse, Touch, or Gamepad, gameplay code queries the normalized `InputService`:
+The game decouples raw input devices from game actions. Whether playing via Keyboard, Mouse, Touch, or Gamepad, gameplay code queries the pre-allocated, normalized `InputService` (`src/input/InputService.ts`):
 
 ```mermaid
 flowchart LR
-    KBD[Keyboard Events] --> Normalizer[Input Normalizer]
-    MSE[Mouse Movement] --> Normalizer
-    TCH[Touch / Virtual Sticks] --> Normalizer
-    PAD[HTML5 Gamepad API] --> Normalizer
-    Normalizer --> Actions[Input State: moveVector, lookVector, sprint, jump, interact, brake]
+    KBD[KeyboardMouseInput: WASD, Shift, Space, Mouse Look] --> Normalizer[InputService Normalizer]
+    MSE[Pointer Lock: pointerlockchange & Canvas click] --> Normalizer
+    TCH[TouchInput / VirtualJoystick: Floating Knob & Action Buttons] --> Normalizer
+    PAD[GamepadInput: Standard Gamepad API & Deadzones] --> Normalizer
+    Normalizer --> Actions[InputState: moveX, moveY, lookX, lookY, sprint, jump, interact]
 ```
 
-### Action Schema:
-- `moveVector: Vector2` (Normalized -1.0 to +1.0 for lateral and forward movement)
-- `lookVector: Vector2` (Yaw and Pitch delta angles)
-- `isSprinting: boolean`
-- `isJumping: boolean`
-- `isInteracting: boolean` (Vehicle enter/exit, NPC talk)
-- `handbrake: boolean`
+### Verified Implementation:
+- **`InputTypes.ts`:** Contract defining `InputState` interface and `IInputDevice` lifecycle.
+- **`KeyboardMouseInput.ts`:** Handles WASD, Shift (sprint), Space (jump), and E (interact). Implements browser pointer lock with auto-acquisition on canvas click, stuck-key mitigation via window `blur` and `visibilitychange` listeners.
+- **`GamepadInput.ts`:** Polling HTML5 standard gamepad API with configurable inner deadzones (default 0.15), smoothing linear responses and filtering stick drift.
+- **`TouchInput.ts` & `VirtualJoystick.ts`:** Implements multi-touch floating thumbstick for locomotion and right-half swipe area for camera orbit with `touch-action: none` and `pointerId` tracking, alongside responsive on-screen buttons for Sprint and Jump.
+- **Diagonal Clamping:** `InputService` computes `Math.hypot(moveX, moveY)` and normalizes vectors exceeding $1.0$, preventing diagonal locomotion speed advantages.
+- **Zero Allocations:** Pre-allocated state objects reused on every frame.
 
 ---
 
-## 6. Camera Architecture & Obstacle Avoidance
+## 6. Camera Architecture & Obstacle Avoidance (Phase 3 Verified) `[VERIFIED]`
 
-The camera system uses a state-driven **Spring-Arm Third-Person Camera Controller**:
+The camera system uses a dedicated **Spring-Arm Third-Person Camera Controller** (`src/camera/ThirdPersonCamera.ts`):
 
-1. **Target Attachment:** Binds smoothly to an anchor node (`TransformNode`) situated at the character's chest or vehicle center-of-mass.
-2. **Spherical Coordinate Orbit:** Yaw and pitch are modulated by mouse or touch look inputs, with pitch clamped between -20° (looking upward) and +65° (looking downward).
-3. **Collision / Occlusion Raycast:** A continuous sphere-cast runs from the target anchor to the desired camera position against environmental collision layers. If a wall or ceiling is detected, the camera distance is shortened smoothly to prevent geometry clipping.
-4. **Vehicle Camera Mode:** Switches automatically to a higher speed-dependent follow distance, dynamic field-of-view (FOV) expansion (e.g., 60° at rest up to 75° at top speed), and angular damping.
+1. **Target Attachment:** Binds smoothly to an anchor node (`Vector3`) focused at character eye/chest height ($Y + 1.45m$).
+2. **Spherical Coordinate Orbit:** Yaw and pitch are modulated by mouse, gamepad, or touch look inputs, with pitch clamped between $-20^\circ$ (looking upward) and $+65^\circ$ (looking downward) and yaw wrapped in $[-\pi, \pi]$.
+3. **Collision / Occlusion Raycast:** A continuous spring-arm raycast (`Ray`) probes from the character focus anchor back toward the camera position against static obstacle geometry (`bld_*`, `parapet_*`).
+4. **Instant Wall Shortening:** When an obstruction is detected, the arm immediately shortens to `hit.distance - collisionCushion` ($0.25m$), completely eliminating geometry clipping into building interiors.
+5. **Smooth Recovery:** When the camera clears the wall, distance smoothly expands back to default follow distance ($4.2m$) via exponential damping.
+6. **Zero Allocations:** All rays and position vectors are pre-allocated class members.
+
+---
+
+## 6.1 Kinematic Character Controller & Procedural Model (Phase 3 Baseline) `[VERIFIED]`
+
+Character locomotion is decoupled into visual presentation and kinematic movement:
+
+```mermaid
+graph TD
+    Input[InputService State] --> Controller[PlayerController]
+    Camera[ThirdPersonCamera Yaw] --> Controller
+    Scene[Babylon Scene Geometry] --> Controller
+    
+    Controller --> MoveCalc[Camera-Relative Velocity Calculation]
+    Controller --> WallSlide[Horizontal Wall Slide Raycast & Tangent Projection]
+    Controller --> StepCheck[Vertical Ground / Curb Step-Up 0.18m Raycast]
+    Controller --> SlopeCheck[Walkable Slope Normal Evaluation <= 30 deg]
+    Controller --> FSM[7-State Finite State Machine: IDLE, WALK, RUN, SPRINT, JUMP, FALL, LAND]
+    
+    Controller --> Character[PlayerCharacter: Procedural Retro Model]
+    Character --> VisualNodes[Torso, Head, Sunglasses Visor, Shoulder/Hip Pivots]
+    Character --> SwingAnim[Contra-lateral Limb Swing Animation]
+```
+
+- **Clean Decoupling:** `PlayerController` manipulates a root `TransformNode`. The stylized procedural character (`PlayerCharacter`) attaches to this transform and can be replaced with a glTF 2.0 / GLB skeletal mesh in future phases without rewriting controller kinematics.
+- **Curb Step-Up:** Ground raycast starts at $Y + 0.25m$, effortlessly stepping up $0.18m$ curbs and sidewalks.
+- **Slope Walkability:** Surfaces with normal $N_y \ge \cos(30^\circ) = 0.866$ are climbed smoothly, while steeper obstacles are treated as walls.
+- **Horizontal Obstacle Sliding:** Forward raycast at waist height detects walls and projects velocity along the surface tangent: $\vec{v}_{\parallel} = \vec{v} - \hat{n}(\vec{v} \cdot \hat{n})$.
+- **Zero In-Loop Allocations:** Pre-allocated scratch vectors (`_scratchTargetVel`, `_scratchDisp`, `_groundRay`, `_forwardRay`) eliminate garbage collection overhead.
 
 ---
 

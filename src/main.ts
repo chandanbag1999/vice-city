@@ -4,6 +4,9 @@ import { type Observer } from "@babylonjs/core/Misc/observable";
 import { EngineFactory } from "./core/EngineFactory";
 import { createCityScene } from "./scene/createCityScene";
 import { EnvironmentManager } from "./environment/EnvironmentManager";
+import { PlayerController } from "./player/PlayerController";
+import { ThirdPersonCamera } from "./camera/ThirdPersonCamera";
+import { InputService } from "./input/InputService";
 import { Telemetry } from "./ui/Telemetry";
 
 /**
@@ -47,8 +50,8 @@ async function bootstrap(): Promise<void> {
   const telemetryContainer = document.getElementById("telemetryOverlay") as HTMLElement | null;
   const appContainer = document.getElementById("app");
 
-  if (!canvas) {
-    console.error("[Bootstrap] Canvas element '#renderCanvas' not found in DOM.");
+  if (!canvas || !appContainer) {
+    console.error("[Bootstrap] Canvas '#renderCanvas' or container '#app' not found in DOM.");
     return;
   }
 
@@ -56,7 +59,11 @@ async function bootstrap(): Promise<void> {
   let engine: AbstractEngine | null = null;
   let scene: Scene | null = null;
   let environment: EnvironmentManager | null = null;
+  let player: PlayerController | null = null;
+  let camera: ThirdPersonCamera | null = null;
+  let input: InputService | null = null;
   let telemetry: Telemetry | null = null;
+  let toastEl: HTMLElement | null = null;
   let handleResize: (() => void) | null = null;
   let contextLostObserver: Observer<AbstractEngine> | null = null;
   let contextRestoredObserver: Observer<AbstractEngine> | null = null;
@@ -65,6 +72,11 @@ async function bootstrap(): Promise<void> {
   const cleanup = (): void => {
     if (isCleanedUp) return;
     isCleanedUp = true;
+
+    if (toastEl) {
+      toastEl.remove();
+      toastEl = null;
+    }
 
     if (handleResize) {
       window.removeEventListener("resize", handleResize);
@@ -90,6 +102,27 @@ async function bootstrap(): Promise<void> {
         telemetry.dispose();
       } catch (_) {}
       telemetry = null;
+    }
+
+    if (camera) {
+      try {
+        camera.dispose();
+      } catch (_) {}
+      camera = null;
+    }
+
+    if (player) {
+      try {
+        player.dispose();
+      } catch (_) {}
+      player = null;
+    }
+
+    if (input) {
+      try {
+        input.dispose();
+      } catch (_) {}
+      input = null;
     }
 
     if (environment) {
@@ -130,17 +163,26 @@ async function bootstrap(): Promise<void> {
 
     console.info(`[Bootstrap] Engine initialized with backend: ${backend}`);
 
-    // 2. Build Modular City Block Environment
-    const cityResult = createCityScene(engine, canvas);
+    // 2. Build Controllable Modular City Scene
+    const cityResult = createCityScene(engine, canvas, appContainer);
     scene = cityResult.scene;
     environment = cityResult.environment;
+    player = cityResult.player;
+    camera = cityResult.camera;
+    input = cityResult.input;
 
     // 3. Initialize lightweight telemetry overlay
     if (telemetryContainer) {
       telemetry = new Telemetry(telemetryContainer, engine, scene, backend, canvas);
     }
 
-    // 4. Register context loss & restoration lifecycle observers
+    // 4. Instructions Toast for desktop mouse-look
+    toastEl = document.createElement("div");
+    toastEl.className = "pointer-lock-toast";
+    toastEl.textContent = "Click to aim | WASD to move | Shift to sprint | Space to jump";
+    appContainer.appendChild(toastEl);
+
+    // 5. Register context loss & restoration lifecycle observers
     contextLostObserver = engine.onContextLostObservable.add(() => {
       console.warn("[Bootstrap] Graphics context lost.");
       telemetry?.setStatus("Context Lost");
@@ -151,13 +193,33 @@ async function bootstrap(): Promise<void> {
       telemetry?.setStatus("Context Restored");
     });
 
-    // 5. Start Babylon render loop (prevent duplicate render loops)
+    // 6. Start Babylon render loop (prevent duplicate render loops)
     engine.stopRenderLoop();
     engine.runRenderLoop(() => {
-      scene?.render();
+      if (!scene || !engine) return;
+
+      const dt = engine.getDeltaTime() / 1000.0;
+
+      // Update input, player kinematics, camera spring-arm, and telemetry
+      if (input && player && camera) {
+        input.update(dt);
+        player.update(dt, input.getState(), camera.yaw);
+        camera.update(dt, player.position, input.getState());
+
+        const runtimeState = player.getRuntimeState();
+        telemetry?.updatePlayer(
+          runtimeState.state,
+          runtimeState.speed,
+          player.position.x,
+          player.position.y,
+          player.position.z
+        );
+      }
+
+      scene.render();
     });
 
-    // 6. Responsive window resize handling with DPR awareness
+    // 7. Responsive window resize handling with DPR awareness
     handleResize = (): void => {
       engine?.resize();
     };
@@ -170,9 +232,7 @@ async function bootstrap(): Promise<void> {
     cleanup();
 
     // Display safe, accessible error card
-    if (appContainer) {
-      displayFatalError(appContainer, errorMsg);
-    }
+    displayFatalError(appContainer, errorMsg);
   }
 }
 

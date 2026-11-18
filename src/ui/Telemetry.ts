@@ -21,6 +21,13 @@ export class Telemetry {
   private _frameCount = 0;
   private _rollingDeltaSum = 0;
 
+  // Runtime player telemetry
+  private _playerState = "IDLE";
+  private _playerSpeed = 0;
+  private _playerPosX = 0;
+  private _playerPosY = 0;
+  private _playerPosZ = 0;
+
   constructor(
     container: HTMLElement,
     engine: AbstractEngine,
@@ -70,6 +77,18 @@ export class Telemetry {
         <span class="telemetry-value" id="telemDrawCalls">--</span>
       </div>
       <div class="telemetry-row">
+        <span class="telemetry-label">Player State:</span>
+        <span class="telemetry-value" id="telemPlayerState">--</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Player Speed:</span>
+        <span class="telemetry-value" id="telemPlayerSpeed">--</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Player Pos:</span>
+        <span class="telemetry-value" id="telemPlayerPos">--</span>
+      </div>
+      <div class="telemetry-row">
         <span class="telemetry-label">Canvas Buffer:</span>
         <span class="telemetry-value" id="telemResolution">--</span>
       </div>
@@ -116,6 +135,9 @@ export class Telemetry {
     const drawCallsEl = document.getElementById("telemDrawCalls");
     const resolutionEl = document.getElementById("telemResolution");
     const dprEl = document.getElementById("telemDpr");
+    const playerStateEl = document.getElementById("telemPlayerState");
+    const playerSpeedEl = document.getElementById("telemPlayerSpeed");
+    const playerPosEl = document.getElementById("telemPlayerPos");
 
     this._intervalId = window.setInterval(() => {
       const currentFps = this._engine.getFps();
@@ -144,7 +166,20 @@ export class Telemetry {
       if (drawCallsEl) drawCallsEl.textContent = drawCallsValue.toString();
       if (resolutionEl) resolutionEl.textContent = `${this._canvas.width}×${this._canvas.height}`;
       if (dprEl) dprEl.textContent = window.devicePixelRatio.toFixed(2);
+      if (playerStateEl) playerStateEl.textContent = this._playerState;
+      if (playerSpeedEl) playerSpeedEl.textContent = `${this._playerSpeed.toFixed(1)} m/s`;
+      if (playerPosEl) {
+        playerPosEl.textContent = `${this._playerPosX.toFixed(1)}, ${this._playerPosY.toFixed(1)}, ${this._playerPosZ.toFixed(1)}`;
+      }
     }, intervalMs);
+  }
+
+  public updatePlayer(state: string, speed: number, x: number, y: number, z: number): void {
+    this._playerState = state;
+    this._playerSpeed = speed;
+    this._playerPosX = x;
+    this._playerPosY = y;
+    this._playerPosZ = z;
   }
 
   public setStatus(status: string): void {

@@ -126,3 +126,130 @@ html, body {
     min-width: 200px;
   }
 }
+
+/* Touch Controls & Virtual Joystick Overlay */
+.touch-controls-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 20;
+  touch-action: none;
+}
+
+.touch-zone-left {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  height: 60%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-zone-right {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  height: 60%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-joystick-base {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  margin-left: -50px;
+  margin-top: -50px;
+  border-radius: 50%;
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.6) 0%, rgba(56, 189, 248, 0.15) 100%);
+  pointer-events: none;
+  display: none;
+  transform: translate3d(0, 0, 0);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+
+.touch-joystick-knob {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  top: 29px;
+  left: 29px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.touch-buttons-container {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.touch-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 0.08s ease, background-color 0.15s ease, border-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-btn:active,
+.touch-btn.active {
+  background: #38bdf8;
+  color: #090d16;
+  border-color: #38bdf8;
+  transform: scale(0.92);
+}
+
+.touch-btn-sprint.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #090d16;
+}
+
+/* Pointer Lock Instruction Toast */
+.pointer-lock-toast {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  padding: 6px 14px;
+  color: #94a3b8;
+  font-size: 12px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+  transition: opacity 0.3s;
+}
+

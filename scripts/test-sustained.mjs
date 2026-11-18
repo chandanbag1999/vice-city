@@ -1,7 +1,15 @@
 import { spawn, execSync } from "node:child_process";
 import http from "node:http";
+import os from "node:os";
+import path from "node:path";
 
-const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const CHROME_PATH =
+  process.env.CHROME_PATH ||
+  (process.platform === "win32"
+    ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    : process.platform === "darwin"
+    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    : "google-chrome");
 const PORT = 4173;
 const CDP_PORT = 9225;
 
@@ -70,7 +78,7 @@ class CdpClient {
 
 async function main() {
   console.log("==================================================");
-  console.log("Starting 60-Second Sustained Environment Stress Test");
+  console.log("Starting 60-Second Sustained Environment & Player Stress Test");
   console.log("==================================================");
 
   const previewProc = spawn("cmd.exe", ["/c", `npx vite preview --port ${PORT}`], {
@@ -80,7 +88,7 @@ async function main() {
   // Wait for preview server
   await delay(1500);
 
-  const userDataDir = `C:\\Users\\cbag6\\AppData\\Local\\Temp\\chrome-cdp-sustained-${Date.now()}`;
+  const userDataDir = path.join(os.tmpdir(), `chrome-cdp-sustained-${Date.now()}`);
   const chromeArgs = [
     "--headless=new",
     `--remote-debugging-port=${CDP_PORT}`,
@@ -121,9 +129,32 @@ async function main() {
     // Initial settle
     await delay(3000);
 
+    // Start simulated continuous movement / camera orbiting in browser
+    await client.send("Runtime.evaluate", {
+      expression: `
+        (() => {
+          let step = 0;
+          window.__simInterval = setInterval(() => {
+            step++;
+            // Alternate KeyW and KeyA/KeyD to pace character along avenue and sidewalk
+            const forward = (step % 20 < 14);
+            const sprint = (step % 40 > 25);
+            window.dispatchEvent(new KeyboardEvent(forward ? 'keydown' : 'keyup', { code: 'KeyW', key: 'w', bubbles: true }));
+            window.dispatchEvent(new KeyboardEvent(sprint ? 'keydown' : 'keyup', { code: 'ShiftLeft', key: 'Shift', bubbles: true }));
+
+            // Mouse look delta
+            const canvas = document.getElementById('renderCanvas');
+            if (canvas) {
+              canvas.dispatchEvent(new MouseEvent('mousemove', { movementX: (step % 2 === 0 ? 3 : -2), movementY: 0, bubbles: true }));
+            }
+          }, 100);
+        })()
+      `,
+    });
+
     console.log("\nStarting 60s sampling (samples every 5 seconds):");
-    console.log("Time (s) | Instant FPS | 60-Frame Avg | Active Meshes | JS Heap (MB) | Status");
-    console.log("-------------------------------------------------------------------------");
+    console.log("Time (s) | Instant FPS | 60-Frame Avg | Active Meshes | JS Heap (MB) | Player State | Status");
+    console.log("-----------------------------------------------------------------------------------------");
 
     const samples = [];
     const durationSec = 60;
@@ -139,12 +170,15 @@ async function main() {
             const telemFpsCurrent = document.getElementById('telemFpsCurrent')?.textContent ?? 'N/A';
             const telemFpsAvg = document.getElementById('telemFpsAvg')?.textContent ?? 'N/A';
             const telemMeshes = document.getElementById('telemMeshes')?.textContent ?? 'N/A';
+            const playerState = document.getElementById('telemPlayerState')?.textContent ?? 'N/A';
             const memoryMb = performance.memory ? (performance.memory.usedJSHeapSize / 1048576).toFixed(1) : 'N/A';
+
             return {
               status: telemStatus,
               fpsInstant: telemFpsCurrent,
               fpsAvg: telemFpsAvg,
               meshes: telemMeshes,
+              playerState: playerState,
               heapMb: memoryMb
             };
           })()
@@ -155,13 +189,34 @@ async function main() {
       const s = evalRes.result.value;
       samples.push({ elapsed, ...s });
       console.log(
-        `${String(elapsed).padStart(8)} | ${String(s.fpsInstant).padStart(11)} | ${String(s.fpsAvg).padStart(12)} | ${String(s.meshes).padStart(13)} | ${String(s.heapMb).padStart(12)} | ${s.status}`
+        `${String(elapsed).padStart(8)} | ${String(s.fpsInstant).padStart(11)} | ${String(s.fpsAvg).padStart(12)} | ${String(s.meshes).padStart(13)} | ${String(s.heapMb).padStart(12)} | ${String(s.playerState).padStart(12)} | ${s.status}`
       );
     }
 
+    // Clean up simulation
+    await client.send("Runtime.evaluate", {
+      expression: `
+        if (window.__simInterval) clearInterval(window.__simInterval);
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', key: 'w', bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft', key: 'Shift', bubbles: true }));
+      `,
+    });
+
     client.close();
-    console.log("-------------------------------------------------------------------------");
+    console.log("-----------------------------------------------------------------------------------------");
     console.log("Sustained test completed successfully!");
+
+    // Validate memory stability
+    const validHeaps = samples.map(s => parseFloat(s.heapMb)).filter(h => !isNaN(h));
+    if (validHeaps.length >= 2) {
+      const initialHeap = validHeaps[0];
+      const finalHeap = validHeaps[validHeaps.length - 1];
+      const delta = finalHeap - initialHeap;
+      console.log(`Initial Heap: ${initialHeap.toFixed(1)} MB, Final Heap: ${finalHeap.toFixed(1)} MB, Delta: ${delta >= 0 ? "+" : ""}${delta.toFixed(1)} MB`);
+      if (delta > 20.0) {
+        throw new Error(`Excessive JS Heap growth detected over 60s: ${delta.toFixed(1)} MB`);
+      }
+    }
   } finally {
     try {
       execSync(`taskkill /F /T /PID ${chromeProc.pid}`, { stdio: "ignore" });

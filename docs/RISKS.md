@@ -44,7 +44,13 @@ Before any 3D model, sound sample, or texture is added to the repository:
 ## 3. Empirical Risk Validation Milestones
 
 ### Phase 2 Validation (Task 003 — 2026-11-18)
-- **RSK-001 (Memory Ceiling):** Empirical sustained 60-second headless Chrome stress test demonstrated completely flat JS heap memory between 12.8 MB and 13.6 MB with zero memory leaks.
+- **RSK-001 (Memory Ceiling):** Empirical sustained 60-second headless Chrome stress test demonstrated stable, flat JS heap memory between 12.8 MB and 13.6 MB with no upward memory drift observed during the test window.
 - **RSK-003 (Integrated GPU Draw Calls):** Implemented Babylon.js Thin Instances for 48 street props across 6 categories (12 base draw calls) and merged materials across 7 modular buildings and road markings. Total active meshes: 63, keeping draw calls well below the 150-call budget ceiling (~45–55 draw calls).
 - **RSK-005 (Rendering Fallback):** Headless Chrome CDP testing verified both WebGPU (`WebGPUEngine`) and WebGL 2 fallback (`Engine` with `webglVersion >= 2`) delivering locked 60 FPS.
+
+### Phase 3 Validation (Task 004 — 2026-11-18)
+- **RSK-001 (Memory Stability under Dynamic Locomotion):** Empirical sustained 60-second headless Chrome stress test with continuous simulated character movement and camera orbiting showed a flat JS heap (15.7 MB to 14.3 MB, delta -1.4 MB) and locked 60 FPS. Zero in-loop allocations in character controller and camera confirmed.
+- **RSK-009 (Input & Mobile Touch Latency):** Decoupled `InputService` with unified diagonal normalization ($\le 1.0$), pointer lock integration, stuck-key mitigation on window blur/visibility loss, and responsive multi-touch `VirtualJoystick` with `touch-action: none` and independent `pointerId` tracking.
+- **Kinematic Locomotion & Geometry Tunneling:** Downward raycast starting at $Y + stepUpHeight + 0.1$ ($0.35m$) safely navigates $0.18m$ curbs and sidewalks. Walkable slope normal checks ($N_y \ge \cos(30^\circ) = 0.866$) and horizontal wall sliding with tangent velocity projection prevent obstacle penetration or slope sliding.
+- **Camera Obstruction Avoidance:** Dedicated spring-arm camera with raycast obstruction probe against static obstacles (`bld_*`, `shell_*`, `parapet_*`) provides rapid collision pull-in and smooth distance recovery, preventing geometry clipping into building interiors.
 

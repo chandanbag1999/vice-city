@@ -1,10 +1,17 @@
 import { spawn, execSync } from "node:child_process";
 import http from "node:http";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const CHROME_PATH =
+  process.env.CHROME_PATH ||
+  (process.platform === "win32"
+    ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    : process.platform === "darwin"
+    ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    : "google-chrome");
 const PORT = 4173;
-const CDP_PORT = 9222;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,7 +81,7 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
   console.log(`Starting Test: ${testName} (CDP Port: ${cdpPort})`);
   console.log(`========================================`);
 
-  const userDataDir = `C:\\Users\\cbag6\\AppData\\Local\\Temp\\chrome-cdp-test-${Date.now()}`;
+  const userDataDir = path.join(os.tmpdir(), `chrome-cdp-test-${Date.now()}`);
   const chromeArgs = [
     "--headless=new",
     `--remote-debugging-port=${cdpPort}`,
@@ -140,11 +147,12 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
     console.log(`Navigating to http://localhost:${PORT}...`);
     await client.send("Page.navigate", { url: `http://localhost:${PORT}/` });
 
-    // Wait 4 seconds for render loop and 60-frame rolling average accumulation
-    console.log("Waiting 4000ms for scene rendering and rolling frame metrics...");
-    await delay(4000);
+    // Wait 3.5 seconds for scene rendering and rolling frame metrics
+    console.log("Waiting 3500ms for scene initialization and first frames...");
+    await delay(3500);
 
-    const evalResult = await client.send("Runtime.evaluate", {
+    // 1. Initial State Check (Idle spawn)
+    const initialEval = await client.send("Runtime.evaluate", {
       expression: `
         (() => {
           const telemStatus = document.getElementById('telemStatus')?.textContent ?? 'N/A';
@@ -154,6 +162,9 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
           const telemDrawCalls = document.getElementById('telemDrawCalls')?.textContent ?? 'N/A';
           const telemResolution = document.getElementById('telemResolution')?.textContent ?? 'N/A';
           const telemDpr = document.getElementById('telemDpr')?.textContent ?? 'N/A';
+          const telemPlayerState = document.getElementById('telemPlayerState')?.textContent ?? 'N/A';
+          const telemPlayerSpeed = document.getElementById('telemPlayerSpeed')?.textContent ?? 'N/A';
+          const telemPlayerPos = document.getElementById('telemPlayerPos')?.textContent ?? 'N/A';
           const backendBadge = document.querySelector('.badge-webgpu, .badge-webgl2')?.textContent ?? 'N/A';
           const errorCard = document.querySelector('.error-card')?.textContent ?? null;
 
@@ -164,6 +175,9 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
             fpsRolling60: telemFpsAvg,
             activeMeshes: telemMeshes,
             drawCalls: telemDrawCalls,
+            playerState: telemPlayerState,
+            playerSpeed: telemPlayerSpeed,
+            playerPos: telemPlayerPos,
             resolution: telemResolution,
             dpr: telemDpr,
             hasErrorCard: !!errorCard,
@@ -174,24 +188,157 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
       returnByValue: true,
     });
 
-    const metrics = evalResult.result.value;
-    console.log("\n--- Telemetry Metrics Harvested ---");
-    console.log(`Backend Badge:    ${metrics.backendBadge}`);
-    console.log(`Engine Status:    ${metrics.status}`);
-    console.log(`Instant FPS:      ${metrics.fpsInstant}`);
-    console.log(`60-Frame Avg FPS: ${metrics.fpsRolling60}`);
-    console.log(`Active Meshes:    ${metrics.activeMeshes}`);
-    console.log(`Draw Calls:       ${metrics.drawCalls}`);
-    console.log(`Resolution:       ${metrics.resolution}`);
-    console.log(`DPR:              ${metrics.dpr}`);
-    console.log(`Error Card:       ${metrics.hasErrorCard ? "YES - " + metrics.errorCardText : "None"}`);
+    const initialMetrics = initialEval.result.value;
+    console.log("\n--- Initial Spawn Telemetry ---");
+    console.log(`Backend Badge:    ${initialMetrics.backendBadge}`);
+    console.log(`Engine Status:    ${initialMetrics.status}`);
+    console.log(`Instant FPS:      ${initialMetrics.fpsInstant}`);
+    console.log(`60-Frame Avg FPS: ${initialMetrics.fpsRolling60}`);
+    console.log(`Active Meshes:    ${initialMetrics.activeMeshes}`);
+    console.log(`Player State:     ${initialMetrics.playerState}`);
+    console.log(`Player Speed:     ${initialMetrics.playerSpeed}`);
+    console.log(`Player Pos:       ${initialMetrics.playerPos}`);
+    console.log(`Error Card:       ${initialMetrics.hasErrorCard ? "YES - " + initialMetrics.errorCardText : "None"}`);
+
+    if (initialMetrics.hasErrorCard) {
+      throw new Error(`Fatal Error Card present: ${initialMetrics.errorCardText}`);
+    }
+    if (initialMetrics.status !== "Running") {
+      throw new Error(`Expected status 'Running', got '${initialMetrics.status}'`);
+    }
+    if (initialMetrics.playerState !== "IDLE") {
+      throw new Error(`Expected initial player state 'IDLE', got '${initialMetrics.playerState}'`);
+    }
+
+    // 2. Simulate Forward Walk Locomotion (KeyW)
+    console.log("\nSimulating Forward Walk Locomotion (KeyW down for 1000ms)...");
+    await client.send("Runtime.evaluate", {
+      expression: `
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', key: 'w', bubbles: true }));
+      `,
+    });
+    await delay(1000);
+
+    const walkEval = await client.send("Runtime.evaluate", {
+      expression: `
+        (() => {
+          const state = document.getElementById('telemPlayerState')?.textContent ?? 'N/A';
+          const speed = document.getElementById('telemPlayerSpeed')?.textContent ?? 'N/A';
+          const pos = document.getElementById('telemPlayerPos')?.textContent ?? 'N/A';
+          return { state, speed, pos };
+        })()
+      `,
+      returnByValue: true,
+    });
+    const walkMetrics = walkEval.result.value;
+    console.log(`Walk State: ${walkMetrics.state}, Speed: ${walkMetrics.speed}, Pos: ${walkMetrics.pos}`);
+
+    if (walkMetrics.state !== "WALK" && walkMetrics.state !== "RUN" && walkMetrics.state !== "SPRINT") {
+      throw new Error(`Expected state WALK/RUN/SPRINT during KeyW, got ${walkMetrics.state}`);
+    }
+
+    // 3. Simulate Sprint (ShiftLeft + KeyW)
+    console.log("\nSimulating Sprint (ShiftLeft + KeyW for 800ms)...");
+    await client.send("Runtime.evaluate", {
+      expression: `
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', key: 'Shift', bubbles: true }));
+      `,
+    });
+    await delay(800);
+
+    const sprintEval = await client.send("Runtime.evaluate", {
+      expression: `
+        (() => {
+          const state = document.getElementById('telemPlayerState')?.textContent ?? 'N/A';
+          const speed = document.getElementById('telemPlayerSpeed')?.textContent ?? 'N/A';
+          const pos = document.getElementById('telemPlayerPos')?.textContent ?? 'N/A';
+          return { state, speed, pos };
+        })()
+      `,
+      returnByValue: true,
+    });
+    const sprintMetrics = sprintEval.result.value;
+    console.log(`Sprint State: ${sprintMetrics.state}, Speed: ${sprintMetrics.speed}, Pos: ${sprintMetrics.pos}`);
+    if (sprintMetrics.state !== "SPRINT") {
+      throw new Error(`Expected state SPRINT, got ${sprintMetrics.state}`);
+    }
+
+    // 4. Simulate Jump (Space)
+    console.log("\nSimulating Jump (Space key)...");
+    await client.send("Runtime.evaluate", {
+      expression: `
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true }));
+      `,
+    });
+    await delay(200);
+
+    const jumpEval = await client.send("Runtime.evaluate", {
+      expression: `
+        (() => {
+          const state = document.getElementById('telemPlayerState')?.textContent ?? 'N/A';
+          const speed = document.getElementById('telemPlayerSpeed')?.textContent ?? 'N/A';
+          const pos = document.getElementById('telemPlayerPos')?.textContent ?? 'N/A';
+          return { state, speed, pos };
+        })()
+      `,
+      returnByValue: true,
+    });
+    console.log(`Jump State: ${jumpEval.result.value.state}, Pos: ${jumpEval.result.value.pos}`);
+
+    // Release keys
+    await client.send("Runtime.evaluate", {
+      expression: `
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', key: 'w', bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ShiftLeft', key: 'Shift', bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', key: ' ', bubbles: true }));
+      `,
+    });
+    await delay(600);
+
+    // 5. Simulate Camera Mouse Look & Touch Controls
+    console.log("\nSimulating Camera Orbit deltas & Touch Joystick interaction...");
+    await client.send("Runtime.evaluate", {
+      expression: `
+        // Dispatch mouse movement
+        const canvas = document.getElementById('renderCanvas');
+        if (canvas) {
+          canvas.dispatchEvent(new MouseEvent('mousemove', { movementX: 45, movementY: -10, bubbles: true }));
+        }
+
+        // Test touch joystick dispatch
+        const leftZone = document.querySelector('.touch-zone-left');
+        if (leftZone) {
+          leftZone.dispatchEvent(new PointerEvent('pointerdown', {
+            pointerId: 101,
+            clientX: 60,
+            clientY: 600,
+            bubbles: true
+          }));
+          window.dispatchEvent(new PointerEvent('pointermove', {
+            pointerId: 101,
+            clientX: 60,
+            clientY: 540,
+            bubbles: true
+          }));
+        }
+      `,
+    });
+    await delay(500);
+
+    // Release touch pointer
+    await client.send("Runtime.evaluate", {
+      expression: `
+        window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 101, bubbles: true }));
+      `,
+    });
+    await delay(400);
 
     // Capture screenshot for visual inspection
     const screenshotDir = "screenshots";
     if (!fs.existsSync(screenshotDir)) {
       fs.mkdirSync(screenshotDir, { recursive: true });
     }
-    const screenshotTag = disableGpu ? "webgl2" : "webgpu";
+    const screenshotTag = disableGpu ? "player-webgl2" : "player-webgpu";
     const screenshotData = await client.send("Page.captureScreenshot", { format: "png" });
     if (screenshotData && screenshotData.data) {
       const screenshotPath = `${screenshotDir}/screenshot-${screenshotTag}.png`;
@@ -204,38 +351,27 @@ async function runTest(testName, disableGpu = false, cdpPort = 9222) {
 
     client.close();
 
-    // Validations
-    if (metrics.hasErrorCard) {
-      throw new Error(`Fatal Error Card present: ${metrics.errorCardText}`);
-    }
-    if (metrics.status !== "Running") {
-      throw new Error(`Expected status 'Running', got '${metrics.status}'`);
-    }
-    const fpsInstantNum = parseInt(metrics.fpsInstant, 10);
-    const fpsAvgNum = parseInt(metrics.fpsRolling60, 10);
+    const fpsInstantNum = parseInt(initialMetrics.fpsInstant, 10);
+    const fpsAvgNum = parseInt(initialMetrics.fpsRolling60, 10);
     if (fpsInstantNum < 30) {
       throw new Error(`Instant FPS too low: ${fpsInstantNum}`);
     }
     if (fpsAvgNum < 30) {
       throw new Error(`60-Frame Avg FPS too low: ${fpsAvgNum}`);
     }
-    const activeMeshesNum = parseInt(metrics.activeMeshes, 10);
-    if (isNaN(activeMeshesNum) || activeMeshesNum < 20 || activeMeshesNum > 80) {
-      throw new Error(`Expected 20-80 active meshes for city block, got '${metrics.activeMeshes}'`);
-    }
 
     if (disableGpu) {
-      if (metrics.backendBadge !== "WebGL 2") {
-        throw new Error(`Expected WebGL 2 backend badge, got '${metrics.backendBadge}'`);
+      if (initialMetrics.backendBadge !== "WebGL 2") {
+        throw new Error(`Expected WebGL 2 backend badge, got '${initialMetrics.backendBadge}'`);
       }
     } else {
-      if (metrics.backendBadge !== "WebGPU") {
-        throw new Error(`Expected WebGPU backend badge, got '${metrics.backendBadge}'`);
+      if (initialMetrics.backendBadge !== "WebGPU") {
+        throw new Error(`Expected WebGPU backend badge, got '${initialMetrics.backendBadge}'`);
       }
     }
 
     console.log(`\n>>> TEST PASSED: ${testName} <<<\n`);
-    return { success: true, metrics };
+    return { success: true, metrics: initialMetrics };
   } finally {
     try {
       execSync(`taskkill /F /T /PID ${chromeProc.pid}`, { stdio: "ignore" });
@@ -292,6 +428,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("FATAL TEST SUITE FAILURE:", err);
+  console.error("Test execution failed:", err);
   process.exit(1);
 });

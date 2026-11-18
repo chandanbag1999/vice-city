@@ -123,28 +123,32 @@ All technical documents are stored in `/docs` and maintained under strict versio
 | Scene & Canvas Mount | `[VERIFIED]` | `index.html`, `styles/main.css`, `src/scene/createCityScene.ts`, and `src/main.ts` running at 60 FPS in Chrome 157 with context loss/restore handlers. |
 | Telemetry Overlay | `[VERIFIED]` | `src/ui/Telemetry.ts` displaying live backend, instant/rolling FPS, active meshes, buffer resolution, DPR, and lifecycle status. |
 | Modular City Block Environment | `[VERIFIED]` | `src/environment/` subsystem (MaterialLibrary, RoadSystem, BuildingGenerator, PropFactory, EnvironmentManager) rendering 72m avenue, intersection, sidewalks, 7 buildings, and 48 thin-instanced props in 63 active meshes. |
+| Player Locomotion & Character Controller | `[VERIFIED]` | `src/player/` subsystem (`PlayerCharacter`, `PlayerController`, `PlayerConfig`, `PlayerState`) implementing camera-relative kinematic movement, curb step-up (0.18m), 30° slope testing, wall sliding, jump, gravity, and procedural limb swing animation. |
+| Third-Person Follow Camera | `[VERIFIED]` | `src/camera/` subsystem (`ThirdPersonCamera`, `CameraConfig`) implementing spherical orbit, mouse/gamepad/touch look, spring-arm wall obstruction raycast probe, and smooth distance recovery. |
+| Unified Input Abstraction & Touch Controls | `[VERIFIED]` | `src/input/` and `src/ui/VirtualJoystick.ts` supporting Keyboard/Mouse, Gamepad API, and responsive multi-touch floating joystick and HUD buttons with diagonal normalization. |
 | Havok WASM Setup | `[NOT_STARTED]` | Explicitly deferred to Phase 4 (physics integration milestone). |
-| Player Locomotion | `[PROPOSED]` | Architectural design documented; no code written yet. |
 | Vehicle Simulation | `[PROPOSED]` | Architectural design documented; no code written yet. |
 | Traffic & NPC Simulation | `[PROPOSED]` | Architectural design documented; no code written yet. |
-| Mobile Physical Compatibility | `[UNVERIFIED]` | Browser touch viewport meta configured; physical device benchmark pending. |
+| Mobile Physical Compatibility | `[UNVERIFIED]` | Browser touch viewport meta configured; simulated in CDP test; physical mobile device benchmark pending. |
 
 ---
 
 ## 8. Development State
 
-- **Current Development Phase:** **Phase 2: Small Optimized 3D Environment (Test District) `[COMPLETED]`** / Transitioning to **Phase 3: Player Movement, Camera & Input Abstraction `[NEXT APPROVED]`**
-- **Last Completed Task:** `TASK 003: Modular City Block Environment Prototype (Phase 2) [VERIFIED]`
-  - Built modular procedural urban environment prototype in `src/environment/` without external dependencies or heavy bundle overhead.
-  - Implemented `MaterialLibrary` with 26 shared PBR materials (asphalt, concrete, sidewalks, curbs, markings, plaster, terracotta brick, modern concrete, glass, metals, foliage, wood, and emissive lamp glow).
-  - Implemented `RoadSystem` with 72m × 9m main asphalt avenue, 20m × 8m T-intersection side street, elevated 0.18m concrete sidewalks and curbs, dashed yellow centerlines, solid white lane edges, and zebra pedestrian crosswalks with stop lines.
-  - Implemented `BuildingGenerator` & `buildingPresets.ts` procedurally assembling 7 distinct modular buildings with shopfront glass, display alcoves, fabric awnings, upper floor window bays with sills, cornices, balconies, and rooftop infrastructure (elevator penthouses, water towers, HVAC chillers). Merged shared materials per building.
-  - Implemented `PropFactory` & `propLayout.ts` with 48 urban street props (street lamps with emissive glow lenses, trees in concrete planters, benches, waste bins, traffic signs, flower planters) driven by Babylon.js Thin Instances in only 12 GPU draw calls.
-  - Mounted via `src/scene/createCityScene.ts` and `src/main.ts` with natural lighting and ArcRotateCamera orbit controls.
-  - Verified WebGPU (60 FPS, 63 meshes) and WebGL 2 (60 FPS, 63 meshes) via headless Chrome CDP test (`scripts/test-cdp.mjs`) and captured screenshots in `screenshots/`.
-  - Executed 60-second sustained stress test (`scripts/test-sustained.mjs`) demonstrating flat 12.8–13.6 MB JS heap and locked 60 FPS.
-- **Current Active Task:** `None (Phase 2 Complete / Awaiting Phase 3 user approval)`
-- **Next Approved Task:** `TASK 004 / Phase 3: Player Movement, Camera & Input Abstraction` (Awaiting explicit review and user approval)
+- **Current Development Phase:** **Phase 3: Player Movement, Camera & Input Abstraction `[COMPLETED]`**
+- **Last Completed Task:** `TASK 004: Player Movement, Camera & Input Abstraction (Phase 3) [VERIFIED]`
+  - Resolved 5 audit findings from Task 003: strict `material: Material | null` typing in `BuildingGenerator.ts`, reconciled material count to 32, empirical flat heap sustained test wording, portable OS temp directories and Chrome path fallbacks, and exposed `npm run test:sustained` and `npm run test:cdp`.
+  - Built unified input abstraction layer (`src/input/`) with `InputTypes.ts`, `KeyboardMouseInput.ts` (WASD, sprint, jump, pointer lock, stuck-key mitigation on window blur/visibilitychange), `GamepadInput.ts` (deadzones, normalized axes), `TouchInput.ts`, and `InputService.ts` enforcing diagonal vector clamping ($\le 1.0$).
+  - Implemented responsive multi-touch HUD (`src/ui/VirtualJoystick.ts`, `styles/main.css`) with pointer-tracked floating thumbstick, right swipe look area, jump & sprint buttons with `touch-action: none`.
+  - Implemented procedural retro character model (`src/player/PlayerCharacter.ts`) with stylized Cuban shirt, trousers, head with forward sunglasses visor (+Z indicator), articulated shoulder/hip pivot nodes, and contra-lateral limb swing animation, decoupled from controller for seamless future glTF skeletal mesh replacement.
+  - Implemented kinematic player controller (`src/player/PlayerController.ts`) featuring camera-relative locomotion, curb step-up (0.18m curbs), 30° slope testing, wall sliding with tangent velocity projection, jump & gravity, and 7-state finite state machine (IDLE, WALK, RUN, SPRINT, JUMP, FALL, LAND) with zero in-loop memory allocations.
+  - Implemented dedicated third-person follow camera (`src/camera/ThirdPersonCamera.ts`) with spherical orbit, mouse/gamepad/touch look integration, spring-arm wall obstruction raycast probe against buildings, rapid pull-in, smooth distance recovery, and pitch clamping.
+  - Built 30° test ramp (`ramp_slope_30deg`) and platform in `src/environment/roads/RoadSystem.ts` for empirical slope climbing and normal validation.
+  - Enhanced telemetry overlay (`src/ui/Telemetry.ts`) displaying real-time player state, speed, and 3D coordinates.
+  - Verified in headless Chrome CDP tests (`scripts/test-cdp.mjs`) on both WebGPU (60 FPS) and WebGL 2 (60 FPS) with automated player locomotion, sprint, jump, camera orbit, and touch control simulation, capturing screenshots `screenshot-player-webgpu.png` and `screenshot-player-webgl2.png`.
+  - Executed 60-second sustained stress test (`scripts/test-sustained.mjs`) with continuous active player movement and camera orbiting, demonstrating a solid 60 FPS and a stable flat JS heap (15.7 MB to 14.3 MB, delta -1.4 MB) with zero upward memory drift.
+- **Current Active Task:** `None (Awaiting Next Task Approval)`
+- **Next Approved Task:** `TASK 005 / Phase 4: Havok Physics V2 & Interactive Objects (Explicitly Deferred to Phase 4) [PROPOSED]`
 
 ---
 
@@ -178,10 +182,15 @@ All technical documents are stored in `/docs` and maintained under strict versio
 
 ## 12. Verification & Audit Trail
 
+- **Document Version:** 1.5.0
+- **Audited By:** Senior Browser Game Engineer & Software Architect
+- **Audit Timestamp:** 2026-11-18T23:45:00+05:30
+- **Integrity Status:** `[VERIFIED]` Task 004 Phase 3 Player Movement, Camera & Input Abstraction completed, verified in headless Chrome CDP tests for WebGPU and WebGL 2 at locked 60 FPS, 60s sustained test confirmed flat heap (15.7 MB to 14.3 MB, delta -1.4 MB) with active player locomotion and camera orbiting.
+
 - **Document Version:** 1.4.0
 - **Audited By:** Senior Browser Game Engineer & Software Architect
 - **Audit Timestamp:** 2026-11-18T22:30:00+05:30
-- **Integrity Status:** `[VERIFIED]` Task 003 Phase 2 Modular City Block completed, verified in headless Chrome CDP tests for WebGPU and WebGL 2 at locked 60 FPS, 60s sustained test confirmed flat heap and zero leaks.
+- **Integrity Status:** `[VERIFIED]` Task 003 Phase 2 Modular City Block completed, verified in headless Chrome CDP tests for WebGPU and WebGL 2 at locked 60 FPS, 60s sustained test confirmed stable flat heap with no upward drift observed.
 
 - **Document Version:** 1.3.0
 - **Audited By:** Senior Browser Game Engineer & Software Architect
